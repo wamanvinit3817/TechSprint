@@ -30,6 +30,7 @@ app.listen(process.env.PORT || 5000,() =>{
 });
 
 app.use("/api", require("./routes/test"));
+app.use("/api/items", require("./routes/item"));
 
 
 app.get("/", (req, res) => {
