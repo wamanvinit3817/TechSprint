@@ -5,8 +5,7 @@ import AuthSuccess from "./pages/AuthSuccess";
 import Dashboard from "./pages/Dashboard";
 import SocietyLogin from "./pages/SocietyLogin";
 import CollegeCodeLogin from "./pages/CollegecodeLogin";
-
-import "./App.css"
+import "./App.css";
 
 function App() {
   return (
