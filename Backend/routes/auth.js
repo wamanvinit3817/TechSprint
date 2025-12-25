@@ -1,6 +1,10 @@
 const express = require("express");
 const passport = require("passport");
 const router = express.Router();
+const College = require("../models/College")
+const Society = require("../models/Society")
+const User = require("../models/User")
+
 
 // router.get("/google", (req, res, next) => {
 //   const societyCode = req.query.societyCode;
@@ -14,6 +18,7 @@ const router = express.Router();
 //       : undefined
 //   })(req, res, next);
 // });
+const authMiddleware = require("../middleware/authMiddleware")
 router.get("/google", (req, res, next) => {
   const state = {};
 
@@ -57,6 +62,50 @@ router.get("/google/callback", (req, res, next) => {
     }
   )(req, res, next);
 });
+
+
+router.get("/me", authMiddleware, async (req, res) => {
+  try {
+    if (!req.user || !req.user.organizationType) {
+      return res.status(400).json({ error: "Invalid user payload" });
+    }
+
+    const user = await User.findById(req.user.userId).select("name email");
+
+    let orgName = "";
+
+    if (req.user.organizationType === "college") {
+      const college = await College.findById(req.user.collegeId);
+      orgName = college?.name || "College";
+    }
+
+    if (req.user.organizationType === "society") {
+      const society = await Society.findById(req.user.societyId);
+      orgName = society?.name || "Society";
+    }
+
+    res.json({
+      user: {
+        name: user?.name,
+        email: user?.email
+      },
+      organization: {
+        type: req.user.organizationType,
+        name: orgName
+      }
+    });
+  } catch (err) {
+    console.error("❌ /auth/me ERROR:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+
+
+
+
 
 
 
