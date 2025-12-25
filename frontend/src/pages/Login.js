@@ -48,52 +48,61 @@ function Login() {
     navigate("/", { replace: true });
   }, [location.search, navigate]);
 
-  return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h2>Campus Lost & Found</h2>
+ return (
+  <div className="login-page">
+    <div className="login-card">
+      {/* App Name */}
+      
+      <h1 className="app-name">Findora</h1>
+      <p className="tagline">Campus Lost &amp; Found System</p>
 
+      {/* Error Message */}
       {errorMsg && (
-        <div style={{ color: "red", marginBottom: "15px" }}>
+        <div className="login-error">
           {errorMsg}
         </div>
       )}
 
+      {/* College Login */}
       <button
-        onClick={() => window.location.href = "http://localhost:5000/auth/google"}
-        className="btn btn-outline-primary my-3"
+        className="login-btn google"
+        onClick={() =>
+          (window.location.href = "http://localhost:5000/auth/google")
+        }
       >
-        Login as college student
+        <i className="fa-brands fa-google"></i>
+        Login as College Student
       </button>
+      <span className="hint">Valid college email required</span>
 
-      <p style={{ fontSize: "small" }}>
-        Note: Valid college email required
-      </p>
+      <div className="divider">OR</div>
 
-      <hr style={{ width: "300px", margin: "30px auto" }} />
-
+      {/* Society Login */}
       <button
+        className="login-btn society"
         onClick={() => navigate("/society-login")}
-        className="btn btn-outline-primary my-3"
       >
+        <i className="fa-solid fa-users"></i>
         Login as Society Member
       </button>
-      <p style={{ fontSize: "small" }}>
-        Note: Valid invite code required
-      </p>
-      <hr style={{ width: "300px", margin: "30px auto" }} />
+      <span className="hint">Invite code required</span>
+
+      {/* College Code Login */}
       <button
-  onClick={() => navigate("/college-code-login")}
-  className="btn btn-outline-primary my-3"
->
-  Login as College (Invite Code)
-</button>
-
-<p style={{ fontSize: "small" }}>
-  Note: For colleges without official email domains
-</p>
-
+        className="login-btn college"
+        onClick={() => navigate("/college-code-login")}
+      >
+        <i className="fa-solid fa-building-columns"></i>
+        Login as College
+      </button>
+      <span className="hint">
+        For colleges without official email domains
+      </span>
     </div>
-  );
+  </div>
+);
+
+
 }
 
 export default Login;

@@ -8,12 +8,18 @@ import CollegeCodeLogin from "./pages/CollegecodeLogin";
 import VerifyClaim from "./pages/VerifyClaim";
 import AddItem from "./pages/Additem";
 import History from "./pages/History";
+import { AlertProvider } from "./context/AlertContext";
+import GlobalAlert from "./pages/GlobalAlert";
 
 import "./App.css"
+import { LoadingProvider } from "./context/LoadingContext";
 
 function App() {
   return (
+    <LoadingProvider>
+     <AlertProvider>
     <BrowserRouter>
+   
       <Routes>
         <Route path="/" element={<Login />} />        
         <Route path="/society-login" element={<SocietyLogin />} />        
@@ -28,6 +34,9 @@ function App() {
 
       </Routes>
     </BrowserRouter>
+    </AlertProvider>
+    </LoadingProvider>
+    
   );
 }
 

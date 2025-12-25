@@ -33,7 +33,25 @@ function AuthSuccess() {
     }
   }, [navigate]);
 
-  return <p>Finalizing claim...</p>;
+ return (
+  <div className="login-page">
+    <div className="login-card">
+      <h1 className="app-name">Findora</h1>
+      <p className="tagline">Finalizing claim…</p>
+
+      <div
+        style={{
+          marginTop: "18px",
+          fontSize: "0.9rem",
+          opacity: 0.85
+        }}
+      >
+        Please wait while we securely verify and complete the claim
+      </div>
+    </div>
+  </div>
+);
+
 }
 
 export default AuthSuccess;

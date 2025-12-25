@@ -3,15 +3,23 @@ import { apiFetch } from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import defaultImage from "../assets/default-item.png";
 import { QRCodeCanvas } from "qrcode.react";
+import GlobalAlert from "./GlobalAlert";
+import { useAlert } from "../context/AlertContext";
+import { timeAgo } from "../utils/time";
+import GlobalLoader from "./GlobalLoader";
+
 
 function Dashboard() {
+  
+
+   const { showAlert } = useAlert();
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [me, setMe] = useState(null);
-
+  const [qrLoading, setQrLoading] = useState(false);
   const [qrData, setQrData] = useState({
     itemId: null,
     token: null
@@ -26,13 +34,17 @@ function Dashboard() {
 
   const generateQR = async (itemId) => {
     try {
+      setQrLoading(true)
       const res = await apiFetch(
         `http://localhost:5000/api/items/generate-qr/${itemId}`,
         { method: "POST" }
       );
       setQrData({ itemId, token: res.qrToken });
     } catch (err) {
-      alert(err.message);
+     showAlert("danger","Only founder is allowed to generate QR")
+    }
+    finally{
+      setQrLoading(false)
     }
   };
 
@@ -45,12 +57,13 @@ function Dashboard() {
   useEffect(() => {
     const loadItems = async () => {
       try {
+        setLoading(true)
         const data = await apiFetch(
           "http://localhost:5000/api/items/getallitems"
         );
         setItems(data);
       } catch (err) {
-        alert(err.message);
+        showAlert("danger","Server error")
       } finally {
         setLoading(false);
       }
@@ -77,51 +90,54 @@ const filteredItems = items.filter((item) => {
 });
 
 
-  if (loading) {
-    return (
-      <div className="text-center mt-5">
-        <div className="spinner-border"></div>
-      </div>
-    );
-  }
+
 
   return (
     <>
+    <GlobalLoader show={loading} />
       {/* ================= NAVBAR ================= */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-light px-3">
+      <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 sticky-top">
         <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
           Findora
         </a>
 
-        <ul className="navbar-nav mr-auto">
-          <li className="nav-item">
-            <button
-              className="nav-link btn btn-link"
-              onClick={() => setFilter("all")}
-              style={{ fontSize: "0.8rem" }}
-            >
-              All
-            </button>
-          </li>
-          <li className="nav-item">
-            <button
-              className="nav-link btn btn-link text-danger"
-              onClick={() => setFilter("lost")}
-              style={{ fontSize: "0.8rem" }}
-            >
-              Lost
-            </button>
-          </li>
-          <li className="nav-item">
-            <button
-              className="nav-link btn btn-link text-success"
-              onClick={() => setFilter("found")}
-              style={{ fontSize: "0.8rem" }}
-            >
-              Found
-            </button>
-          </li>
-        </ul>
+       <ul className="navbar-nav mr-auto">
+  <li className="nav-item">
+    <button
+      className={`nav-link btn btn-link ${filter === "all" ? "fw-bold" : ""}`}
+      onClick={() => setFilter("all")}
+    >
+      All
+    </button>
+  </li>
+
+  <li className="nav-item">
+    <button
+      className={`nav-link btn btn-link text-danger ${filter === "lost" ? "fw-bold" : ""}`}
+      onClick={() => setFilter("lost")}
+    >
+      Lost
+    </button>
+  </li>
+
+  <li className="nav-item">
+    <button
+      className={`nav-link btn btn-link text-success ${filter === "found" ? "fw-bold" : ""}`}
+      onClick={() => setFilter("found")}
+    >
+      Found
+    </button>
+  </li>
+
+  <li className="nav-item">
+    <button
+      className={`nav-link btn btn-link text-secondary ${filter === "claimed" ? "fw-bold" : ""}`}
+      onClick={() => setFilter("claimed")}
+    >
+      Claimed
+    </button>
+  </li>
+</ul>
 
         <form
           className="form-inline mx-auto"
@@ -139,12 +155,8 @@ const filteredItems = items.filter((item) => {
           </button>
         </form>
 
-        <div className="d-flex align-items-center">
-          {me?.organization?.name && (
-            <span className="badge bg-dark text-white mr-3 px-3 py-2">
-              {me.organization.name}
-            </span>
-          )}
+     
+
 
           <button
             className="btn btn-outline-primary mr-2"
@@ -170,15 +182,27 @@ const filteredItems = items.filter((item) => {
             Logout
           </button>
 
-          {me && (
-            <div className="text-right ml-3">
-              <div style={{ fontSize: "0.7rem", fontWeight: 500 }}>
-                👤 {me.user?.name}
-              </div>
-            </div>
-          )}
-        </div>
+         {me && (
+  <div className="text-right ml-3">
+    <div className="user-meta d-flex flex-column align-items-center justify-content-center">
+      
+      <div className="user-name">
+        <i className="fa-solid fa-user"></i> {me.user?.name}
+      </div>
+
+      <div className="user-divider"></div>
+
+      <div className="user-org">
+        <i className="fa-solid fa-landmark"></i> {me?.organization?.name}
+      </div>
+
+    </div>
+  </div>
+)}
+
       </nav>
+
+      <GlobalAlert/>
 
       {/* ================= ITEMS ================= */}
       <div className="container mt-4">
@@ -213,11 +237,15 @@ const filteredItems = items.filter((item) => {
                     </div>
 
                     <p className="text-muted mb-1">
-                      Posted by: <strong>{item.postedBy?.name}</strong>
+                      <i class="fa-solid fa-user"></i> Posted by: <strong>{item.postedBy?.name}</strong>
                     </p>
 
-                    <p>{item.description}</p>
-                    <p className="text-muted">
+                    <p className="text-muted mb-1" style={{fontSize:"0.8rem"}}>
+                          <i class="fa-regular fa-clock"></i> {timeAgo(item.createdAt)}
+                        </p>
+
+                    <p> <i class="fa-regular fa-comment"></i> {item.description}</p>
+                    <p className="text-muted my-2">
                       <i className="fa-solid fa-location-dot"></i> {item.location}
                     </p>
 
@@ -243,7 +271,9 @@ const filteredItems = items.filter((item) => {
         >
           <div className="modal-dialog modal-lg modal-dialog-scrollable">
             <div className="modal-content">
+              
               <div className="modal-header">
+              
                 <h5>{selectedItem.title}</h5>
                 <button
                   className="close"
@@ -256,7 +286,10 @@ const filteredItems = items.filter((item) => {
                 </button>
               </div>
 
-              <div className="modal-body">
+            <div
+              className="modal-body"
+              style={{ maxHeight: "70vh", overflowY: "auto" }}
+            >
                 <img
                   src={selectedItem.imageUrl || defaultImage}
                   className="img-fluid mb-3"
@@ -304,13 +337,19 @@ const filteredItems = items.filter((item) => {
                     </div>
                   )}
 
-                {selectedItem.type === "found" &&
-                  selectedItem.founderContact && (
-                    <div className="alert alert-info">
-                      <strong>Contact Finder:</strong><br />
-                      {selectedItem.founderContact}
-                    </div>
-                  )}
+               {selectedItem.type === "found" &&
+  selectedItem.founderContact && (
+    <div className="modal-contact-card">
+      <div className="modal-contact-header">
+        <i class="fa-solid fa-users-rectangle"></i> Contact Finder
+      </div>
+
+      <div className="modal-contact-body">
+        {selectedItem.founderContact}
+      </div>
+    </div>
+)}
+
 
                 {qrData.token &&
                   qrData.itemId === selectedItem._id && (
@@ -334,12 +373,16 @@ const filteredItems = items.filter((item) => {
                   Close
                 </button>
 
-                <button
-                  className="btn btn-primary"
-                  onClick={() => generateQR(selectedItem._id)}
-                >
-                  Generate QR
-                </button>
+                      {selectedItem.type === "found" && (
+            <button
+              className="btn btn-primary"
+              onClick={() => generateQR(selectedItem._id)}
+              disabled={qrLoading}
+            >
+              {qrLoading ? "Generating..." : "Generate QR"}
+            </button>
+          )}
+
               </div>
             </div>
           </div>

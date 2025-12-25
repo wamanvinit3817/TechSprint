@@ -13,36 +13,35 @@ function CollegeCodeLogin() {
       `http://localhost:5000/auth/google?collegeCode=${encodeURIComponent(code)}`;
   };
 
-  return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h2>College Code Login</h2>
+ return (
+  <div className="login-page">
+    <div className="login-card">
+      <h1 className="app-name">Findora</h1>
+      <p className="tagline">College Code Login</p>
 
       <input
         type="text"
+        className="login-input"
         placeholder="Enter College Invite Code"
         value={code}
         onChange={(e) => setCode(e.target.value)}
-        style={{
-          padding: "10px",
-          width: "260px",
-          marginBottom: "20px"
-        }}
       />
 
-      <br />
-
       <button
+        className="login-btn college"
         onClick={handleCollegeCodeLogin}
-        className="btn btn-outline-primary"
       >
+        <i className="fa-brands fa-google"></i>
         Continue with Google
       </button>
 
-      <p style={{ fontSize: "14px", marginTop: "15px", color: "#666" }}>
-        Use the invite code provided by your college admin.
-      </p>
+      <span className="hint">
+        Use the invite code provided by your college admin
+      </span>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default CollegeCodeLogin;

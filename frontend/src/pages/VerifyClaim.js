@@ -37,20 +37,28 @@ function VerifyClaim() {
     navigate("/");
   };
 
-  return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h4>{status}</h4>
+return (
+  <div className="verify-page">
+    <div className="verify-card">
+      <div className="verify-icon">
+        <i className="fa fa-qrcode"></i>
+      </div>
+
+      <h4 className="verify-status">{status}</h4>
 
       {itemId && (
         <button
-          className="btn btn-primary mt-3"
+          className="verify-btn"
           onClick={loginAndClaim}
         >
+          <i className="fa fa-sign-in-alt me-2"></i>
           Login & Claim Item
         </button>
       )}
     </div>
-  );
+  </div>
+);
+
 }
 
 export default VerifyClaim;

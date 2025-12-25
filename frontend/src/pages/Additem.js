@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAlert } from "../context/AlertContext";
+import GlobalAlert from "./GlobalAlert";
 
 function AddItem() {
+  const [submitting, setSubmitting] = useState(false);
+  const { showAlert } = useAlert();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     title: "",
@@ -17,15 +21,34 @@ function AddItem() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
+  try {
+    setSubmitting(true)
     const formData = new FormData();
     formData.append("title", form.title);
     formData.append("description", form.description);
     formData.append("type", form.type);
     formData.append("location", form.location);
+   if (!form.title.trim()) {
+    showAlert("warning", "Title is required");
+    return;
+  }
 
-    // ✅ only attach contact for FOUND items
+  if (!form.description.trim()) {
+    showAlert("warning", "Description is required");
+    return;
+  }
+
+  if (!form.location.trim()) {
+    showAlert("warning", "Location is required");
+    return;
+  }
+
+  if (form.type === "found" && !form.founderContact.trim()) {
+    showAlert("warning", "Contact information is required");
+    return;
+  }
     if (form.type === "found") {
       formData.append("founderContact", form.founderContact);
     }
@@ -34,7 +57,7 @@ function AddItem() {
       formData.append("image", form.image);
     }
 
-    await fetch("http://localhost:5000/api/items/additem", {
+    const res = await fetch("http://localhost:5000/api/items/additem", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`
@@ -42,110 +65,124 @@ function AddItem() {
       body: formData
     });
 
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to post item");
+    }
+     showAlert("success", "Item posted successfully");
     navigate("/dashboard");
-  };
+  } catch (err) {
+    if (err.message === "duplicate_item") {
+    showAlert("warning", "You already posted a similar item");
+  } else {
+    showAlert("danger", "Failed to post item");
+  }
+  }finally{
+    setSubmitting(false)
+  }
+};
 
-  return (
-    <div className="container mt-4">
-      <h3 className="mb-4">Add Lost / Found Item</h3>
+ return (
+  <div className="additem-page container mt-4">
+   <div className="additem-header">
+  <h3>Add Lost / Found Item</h3>
 
-      <form onSubmit={handleSubmit} className="card p-4">
-        {/* TITLE */}
+  <button
+    className="additem-back-btn"
+    onClick={() => navigate("/dashboard")}
+  >
+    ← Back
+  </button>
+</div>
+
+
+    <GlobalAlert />
+
+    <form onSubmit={handleSubmit} className="additem-card card p-4">
+      <div className="mb-3">
+        <label className="form-label">Title</label>
+        <input
+          name="title"
+          className="form-control"
+          
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label">Description</label>
+        <textarea
+          name="description"
+          className="form-control"
+          rows="3"
+          
+          onChange={handleChange}
+        />
+      </div>
+
+     <div className="additem-type mb-3">
+  <label className="additem-label">Type</label>
+
+  <select
+    name="type"
+    className="additem-select"
+    value={form.type}
+    onChange={handleChange}
+  >
+    <option value="lost">Lost</option>
+    <option value="found">Found</option>
+  </select>
+</div>
+
+
+      <div className="mb-3">
+        <label className="form-label">
+          {form.type === "lost"
+            ? "Where did you lose it?"
+            : "Where did you find it?"}
+        </label>
+        <input
+          name="location"
+          className="form-control"
+         
+          onChange={handleChange}
+        />
+      </div>
+
+      {form.type === "found" && (
         <div className="mb-3">
-          <label className="form-label">Title</label>
+          <label className="form-label">
+            How can the owner contact you?
+          </label>
           <input
-            name="title"
+            name="founderContact"
             className="form-control"
-            required
+           
             onChange={handleChange}
           />
         </div>
+      )}
 
-        {/* DESCRIPTION */}
-        <div className="mb-3">
-          <label className="form-label">Description</label>
-          <textarea
-            name="description"
-            className="form-control"
-            rows="3"
-            required
-            onChange={handleChange}
-          />
-        </div>
+      <div className="mb-3">
+        <label className="form-label">Item Photo (optional)</label>
+        <input
+          type="file"
+          className="form-control"
+          accept="image/*"
+          onChange={(e) =>
+            setForm({ ...form, image: e.target.files[0] })
+          }
+        />
+      </div>
 
-        {/* TYPE */}
-        <div className="mb-3">
-          <label className="form-label">Type</label>
-          <select
-            name="type"
-            className="form-select"
-            value={form.type}
-            onChange={handleChange}
-          >
-            <option value="lost">Lost</option>
-            <option value="found">Found</option>
-          </select>
-        </div>
+      <button className="btn btn-success additem-submit">
+         {submitting ? "Posting..." : "Post Item"}
+      </button>
+    </form>
+  </div>
+);
 
-        {/* LOCATION */}
-        {form.type === "found" &&(
-        <div className="mb-3">
-          <label className="form-label">Where did you find it?</label>
-          <input
-            name="location"
-            className="form-control"
-            required
-            onChange={handleChange}
-          />
-        </div>
-        )}
-         {form.type === "lost" && (
-        <div className="mb-3">
-          <label className="form-label">Where did you lose it?</label>
-          <input
-            name="location"
-            className="form-control"
-            required
-            onChange={handleChange}
-          />
-        </div>
-        )}
-
-        {/* ✅ CONTACT INFO (FOUND ONLY) */}
-        {form.type === "found" && (
-          <div className="mb-3">
-            <label className="form-label">
-              How can the owner contact you?
-            </label>
-            <input
-              name="founderContact"
-              className="form-control"
-              placeholder="Phone / Hostel / Any instructions"
-              required
-              onChange={handleChange}
-            />
-          </div>
-        )}
-
-        {/* IMAGE */}
-        <div className="mb-3">
-          <label className="form-label">Item Photo (optional)</label>
-          <input
-            type="file"
-            className="form-control"
-            accept="image/*"
-            onChange={(e) =>
-              setForm({ ...form, image: e.target.files[0] })
-            }
-          />
-        </div>
-
-        <button className="btn btn-success">
-          Post Item
-        </button>
-      </form>
-    </div>
-  );
 }
 
 export default AddItem;

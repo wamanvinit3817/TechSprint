@@ -9,11 +9,11 @@ function History() {
   const [claimedItems, setClaimedItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [activeTab, setActiveTab] = useState("posted");
   const [selectedItem, setSelectedItem] = useState(null);
   const [qrData, setQrData] = useState({ itemId: null, token: null });
 
-  // 🔥 cache matched item previews
-  const [matchedCache, setMatchedCache] = useState({});
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const navigate = useNavigate();
 
@@ -27,7 +27,6 @@ function History() {
         const claimed = await apiFetch(
           "http://localhost:5000/api/items/my-claimed"
         );
-
         setPostedItems(posted);
         setClaimedItems(claimed);
       } catch (err) {
@@ -36,21 +35,18 @@ function History() {
         setLoading(false);
       }
     };
-
     loadAll();
   }, []);
 
   /* ================= DELETE ITEM ================= */
-  const deleteItem = async (itemId) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
-
+  const confirmDelete = async (itemId) => {
     try {
       await apiFetch(
         `http://localhost:5000/api/items/delete/${itemId}`,
         { method: "DELETE" }
       );
-
       setPostedItems((prev) => prev.filter((i) => i._id !== itemId));
+      setDeleteTarget(null);
     } catch (err) {
       alert(err.message);
     }
@@ -69,75 +65,66 @@ function History() {
     }
   };
 
-  /* ================= OPEN MATCHED ITEM ================= */
-  const openMatchedItem = async (itemId) => {
-    try {
-      const item = await apiFetch(
-        `http://localhost:5000/api/items/by-id/${itemId}`
-      );
-      setSelectedItem(item);
-      setQrData({ itemId: null, token: null });
-    } catch {
-      alert("Matched item no longer exists");
-    }
-  };
-
-  /* ================= LOAD MATCH PREVIEW ================= */
-  const loadMatchedPreview = async (itemId) => {
-    if (matchedCache[itemId] !== undefined) return;
-
-    try {
-      const item = await apiFetch(
-        `http://localhost:5000/api/items/by-id/${itemId}`
-      );
-
-      setMatchedCache((prev) => ({
-        ...prev,
-        [itemId]: item
-      }));
-    } catch {
-      // ❗ mark deleted items as null
-      setMatchedCache((prev) => ({
-        ...prev,
-        [itemId]: null
-      }));
-    }
-  };
-
   if (loading) {
     return (
-      <div className="text-center mt-5">
-        <div className="spinner-border"></div>
+      <div className="history-loader">
+        <div className="spinner-border text-light"></div>
+        <div className="mt-2">Loading history...</div>
       </div>
     );
   }
 
+  const itemsToRender =
+    activeTab === "posted" ? postedItems : claimedItems;
+
   return (
-    <div className="container mt-4">
-      <div className="d-flex justify-content-between mb-4">
+    <div className="history-page container mt-4">
+      {/* HEADER */}
+      <div className="history-header d-flex justify-content-between mb-3">
         <h4>My Items</h4>
         <button
-          className="btn btn-outline-secondary"
+          className="history-back-btn"
           onClick={() => navigate("/dashboard")}
         >
-          Back
+          <i className="fa fa-arrow-left me-2"></i>Back
         </button>
       </div>
 
-      {/* ================= MY POSTED ITEMS ================= */}
-      <h5 className="mb-3">📦 My Posted Items</h5>
+      {/* TABS */}
+      <div className="history-tabs mb-4">
+        <button
+          className={`history-tab ${
+            activeTab === "posted" ? "active" : ""
+          }`}
+          onClick={() => setActiveTab("posted")}
+        >
+          <i className="fa fa-box me-2"></i> Posted
+        </button>
 
-      {postedItems.length === 0 ? (
-        <div className="alert alert-info">No items posted yet</div>
+        <button
+          className={`history-tab ${
+            activeTab === "claimed" ? "active" : ""
+          }`}
+          onClick={() => setActiveTab("claimed")}
+        >
+          <i className="fa fa-check-circle me-2"></i> Claimed
+        </button>
+      </div>
+
+      {/* CARDS */}
+      {itemsToRender.length === 0 ? (
+        <div className="alert alert-info text-center">
+          No items found
+        </div>
       ) : (
-        <div className="row mb-5">
-          {postedItems.map((item) => (
+        <div className="row">
+          {itemsToRender.map((item) => (
             <div className="col-md-4 mb-4" key={item._id}>
-              <div className="card">
+              <div className="history-card">
                 <img
                   src={item.imageUrl || defaultImage}
-                  className="card-img-top"
                   alt="item"
+                  className="card-img-top"
                   style={{
                     height: "200px",
                     objectFit: "contain",
@@ -161,31 +148,51 @@ function History() {
 
                   <p className="text-muted">{item.location}</p>
 
-                  {item.status === "claimed" && (
-                    <span className="badge bg-secondary mb-2">
-                      CLAIMED
-                    </span>
-                  )}
-
-                  <div className="d-flex gap-2 mt-2">
+                  <div className="d-flex gap-2 mt-3">
                     <button
-                      className="btn btn-outline-primary"
+                      className="history-btn primary mx-2"
                       onClick={() => {
                         setSelectedItem(item);
                         setQrData({ itemId: null, token: null });
                       }}
                     >
-                      View Details
+                      <i className="fa fa-eye me-1"></i>View
                     </button>
 
-                    {item.status !== "claimed" && (
-                      <button
-                        className="btn btn-outline-danger"
-                        onClick={() => deleteItem(item._id)}
-                      >
-                        Delete
-                      </button>
-                    )}
+                    {activeTab === "posted" &&
+                      item.status !== "claimed" && (
+                        deleteTarget === item._id ? (
+                          <>
+                            <button
+                              className="history-btn danger"
+                              onClick={() =>
+                                confirmDelete(item._id)
+                              }
+                            >
+                              <i className="fa fa-check me-1"></i>
+                              Confirm
+                            </button>
+                            <button
+                              className="history-btn secondary"
+                              onClick={() =>
+                                setDeleteTarget(null)
+                              }
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            className="history-btn danger"
+                            onClick={() =>
+                              setDeleteTarget(item._id)
+                            }
+                          >
+                            <i className="fa fa-trash me-1"></i>
+                            Delete
+                          </button>
+                        )
+                      )}
                   </div>
                 </div>
               </div>
@@ -194,60 +201,17 @@ function History() {
         </div>
       )}
 
-      {/* ================= MY CLAIMED ITEMS ================= */}
-      <h5 className="mb-3">✅ My Claimed Items</h5>
-
-      {claimedItems.length === 0 ? (
-        <div className="alert alert-info">
-          You haven’t claimed any items yet
-        </div>
-      ) : (
-        <div className="row">
-          {claimedItems.map((item) => (
-            <div className="col-md-4 mb-4" key={item._id}>
-              <div className="card border-success">
-                <img
-                  src={item.imageUrl || defaultImage}
-                  className="card-img-top"
-                  alt="item"
-                  style={{
-                    height: "200px",
-                    objectFit: "contain",
-                    backgroundColor: "#f8f9fa"
-                  }}
-                />
-
-                <div className="card-body">
-                  <h5>{item.title}</h5>
-                  <p className="text-muted">{item.location}</p>
-                  <span className="badge bg-success mb-2">
-                    CLAIMED
-                  </span>
-
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={() => {
-                      setSelectedItem(item);
-                      setQrData({ itemId: null, token: null });
-                    }}
-                  >
-                    View Details
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ================= MODAL ================= */}
+      {/* MODAL */}
       {selectedItem && (
         <div
           className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{
+            display: "block",
+            backgroundColor: "rgba(0,0,0,0.5)"
+          }}
         >
           <div className="modal-dialog modal-lg modal-dialog-scrollable">
-            <div className="modal-content">
+            <div className="modal-content history-modal">
               <div className="modal-header">
                 <h5>{selectedItem.title}</h5>
                 <button
@@ -269,66 +233,9 @@ function History() {
                 />
 
                 <p>{selectedItem.description}</p>
-                <p className="text-muted">{selectedItem.location}</p>
-
-                {/* 🔍 POSSIBLE MATCHES (SAFE AGAINST DELETED ITEMS) */}
-                {selectedItem.type === "lost" &&
-                  selectedItem.matchCandidates?.length > 0 && (
-                    <div className="alert alert-warning mt-3">
-                      <h6 className="mb-3">🔍 Possible Matches</h6>
-
-                      {selectedItem.matchCandidates.map((m, i) => {
-                        const preview = matchedCache[m.itemId];
-
-                        // skip deleted items
-                        if (preview === null) return null;
-
-                        if (!preview) {
-                          loadMatchedPreview(m.itemId);
-                        }
-
-                        return (
-                          <div
-                            key={i}
-                            className="d-flex align-items-center border rounded p-2 mb-2"
-                            style={{
-                              cursor: "pointer",
-                              background: "#fffbe6"
-                            }}
-                            onClick={() =>
-                              openMatchedItem(m.itemId)
-                            }
-                          >
-                            <img
-                              src={
-                                preview?.imageUrl ||
-                                defaultImage
-                              }
-                              alt="match"
-                              style={{
-                                width: "60px",
-                                height: "60px",
-                                objectFit: "cover",
-                                borderRadius: "6px",
-                                marginRight: "12px"
-                              }}
-                            />
-
-                            <div>
-                              <strong>
-                                {preview?.title ||
-                                  "Matched Item"}
-                              </strong>
-                              <div style={{ fontSize: "0.85rem" }}>
-                                Confidence:{" "}
-                                {Math.round(m.score * 100)}%
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                <p className="text-muted">
+                  {selectedItem.location}
+                </p>
 
                 {qrData.token &&
                   qrData.itemId === selectedItem._id && (
@@ -343,7 +250,7 @@ function History() {
 
               <div className="modal-footer">
                 <button
-                  className="btn btn-secondary"
+                  className="history-btn secondary"
                   onClick={() => {
                     setSelectedItem(null);
                     setQrData({ itemId: null, token: null });
@@ -354,11 +261,12 @@ function History() {
 
                 {selectedItem.status !== "claimed" && (
                   <button
-                    className="btn btn-primary"
+                    className="history-btn primary"
                     onClick={() =>
                       generateQR(selectedItem._id)
                     }
                   >
+                    <i className="fa fa-qrcode me-1"></i>
                     Generate QR
                   </button>
                 )}

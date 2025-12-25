@@ -41,6 +41,19 @@ router.post(
         matchCandidates: []
       };
 
+       // 🚫 Prevent duplicate post by same uploader (title + location)
+            const duplicate = await Item.findOne({
+          postedBy: req.user.userId,
+          title: { $regex: `^${req.body.title}$`, $options: "i" },
+          location: { $regex: `^${req.body.location}$`, $options: "i" },
+          status: "open"
+        });
+
+        if (duplicate) {
+          return res.status(409).json({ error: "duplicate_item" });
+        }
+
+
       // 1️⃣ Create item
       const item = await Item.create(itemData);
 
