@@ -31,36 +31,35 @@ function SocietyLogin() {
       `http://localhost:5000/auth/google?societyCode=${encodeURIComponent(code)}`;
   };
 
-  return ( 
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h2>Society Member Login</h2>
+return (
+  <div className="login-page">
+    <div className="login-card">
+      <h1 className="app-name">Findora</h1>
+      <p className="tagline">Society Member Login</p>
 
       <input
         type="text"
+        className="login-input"
         placeholder="Enter Society Invite Code"
         value={code}
         onChange={(e) => setCode(e.target.value)}
-        style={{
-          padding: "10px",
-          width: "260px",
-          marginBottom: "20px"
-        }}
       />
 
-      <br />
-
       <button
+        className="login-btn society"
         onClick={handleSocietyLogin}
-        className="btn btn-primary"
       >
+        <i className="fa-brands fa-google"></i>
         Continue with Google
       </button>
 
-      <p style={{ fontSize: "14px", marginTop: "15px", color: "#666" }}>
-        Use the invite code provided by your society admin.
-      </p>
+      <span className="hint">
+        Use the invite code provided by your society admin
+      </span>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default SocietyLogin;

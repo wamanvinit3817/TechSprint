@@ -27,6 +27,7 @@ function Login() {
     navigate("/", { replace: true });
   }, [location.search, navigate]);
 
+
   return (
     <>
       {/* 🌙 / ☀️ THEME TOGGLE */}
@@ -87,6 +88,62 @@ function Login() {
       </div>
     </>
   );
+
+ return (
+  <div className="login-page">
+    <div className="login-card">
+      {/* App Name */}
+      
+      <h1 className="app-name">Findora</h1>
+      <p className="tagline">Campus Lost &amp; Found System</p>
+
+      {/* Error Message */}
+      {errorMsg && (
+        <div className="login-error">
+          {errorMsg}
+        </div>
+      )}
+
+      {/* College Login */}
+      <button
+        className="login-btn google"
+        onClick={() =>
+          (window.location.href = "http://localhost:5000/auth/google")
+        }
+      >
+        <i className="fa-brands fa-google"></i>
+        Login as College Student
+      </button>
+      <span className="hint">Valid college email required</span>
+
+      <div className="divider">OR</div>
+
+      {/* Society Login */}
+      <button
+        className="login-btn society"
+        onClick={() => navigate("/society-login")}
+      >
+        <i className="fa-solid fa-users"></i>
+        Login as Society Member
+      </button>
+      <span className="hint">Invite code required</span>
+
+      {/* College Code Login */}
+      <button
+        className="login-btn college"
+        onClick={() => navigate("/college-code-login")}
+      >
+        <i className="fa-solid fa-building-columns"></i>
+        Login as College
+      </button>
+      <span className="hint">
+        For colleges without official email domains
+      </span>
+    </div>
+  </div>
+);
+
+
 }
 
 export default Login;
