@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 function AddItem() {
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -25,7 +26,6 @@ function AddItem() {
     formData.append("type", form.type);
     formData.append("location", form.location);
 
-    // ✅ only attach contact for FOUND items
     if (form.type === "found") {
       formData.append("founderContact", form.founderContact);
     }
@@ -46,104 +46,105 @@ function AddItem() {
   };
 
   return (
-    <div className="container mt-4">
-      <h3 className="mb-4">Add Lost / Found Item</h3>
+    <div className="app-background">
+      <div className="glass-card add-item-card">
 
-      <form onSubmit={handleSubmit} className="card p-4">
-        {/* TITLE */}
-        <div className="mb-3">
-          <label className="form-label">Title</label>
+        {/* 🔴 CLOSE BUTTON (TOP RIGHT) */}
+        <button
+          type="button"
+          className="additem-close"
+          onClick={() => navigate("/dashboard")}
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+        <h2 className="page-title">Add Lost / Found Item</h2>
+
+        <form onSubmit={handleSubmit}>
+
+          {/* TITLE */}
+          <label>Title</label>
           <input
             name="title"
-            className="form-control"
+            placeholder="Enter item title"
             required
             onChange={handleChange}
           />
-        </div>
 
-        {/* DESCRIPTION */}
-        <div className="mb-3">
-          <label className="form-label">Description</label>
+          {/* DESCRIPTION */}
+          <label>Description</label>
           <textarea
             name="description"
-            className="form-control"
-            rows="3"
+            placeholder="Describe the item"
+            rows="4"
             required
             onChange={handleChange}
           />
-        </div>
 
-        {/* TYPE */}
-        <div className="mb-3">
-          <label className="form-label">Type</label>
+          {/* TYPE */}
+          <label>Type</label>
           <select
             name="type"
-            className="form-select"
             value={form.type}
             onChange={handleChange}
           >
             <option value="lost">Lost</option>
             <option value="found">Found</option>
           </select>
-        </div>
 
-        {/* LOCATION */}
-        {form.type === "found" &&(
-        <div className="mb-3">
-          <label className="form-label">Where did you find it?</label>
+          {/* LOCATION */}
+          <label>
+            {form.type === "lost"
+              ? "Where did you lose it?"
+              : "Where did you find it?"}
+          </label>
           <input
             name="location"
-            className="form-control"
+            placeholder="Location"
             required
             onChange={handleChange}
           />
-        </div>
-        )}
-         {form.type === "lost" && (
-        <div className="mb-3">
-          <label className="form-label">Where did you lose it?</label>
-          <input
-            name="location"
-            className="form-control"
-            required
-            onChange={handleChange}
-          />
-        </div>
-        )}
 
-        {/* ✅ CONTACT INFO (FOUND ONLY) */}
-        {form.type === "found" && (
-          <div className="mb-3">
-            <label className="form-label">
-              How can the owner contact you?
-            </label>
-            <input
-              name="founderContact"
-              className="form-control"
-              placeholder="Phone / Hostel / Any instructions"
-              required
-              onChange={handleChange}
-            />
-          </div>
-        )}
+          {/* CONTACT (FOUND ONLY) */}
+          {form.type === "found" && (
+            <>
+              <label>How can the owner contact you?</label>
+              <input
+                name="founderContact"
+                placeholder="Phone / Hostel / Instructions"
+                required
+                onChange={handleChange}
+              />
+            </>
+          )}
 
-        {/* IMAGE */}
-        <div className="mb-3">
-          <label className="form-label">Item Photo (optional)</label>
-          <input
-            type="file"
-            className="form-control"
-            accept="image/*"
-            onChange={(e) =>
-              setForm({ ...form, image: e.target.files[0] })
-            }
-          />
-        </div>
+          {/* IMAGE */}
+          <label>Item Photo (optional)</label>
+          <div className="file-upload-wrapper">
+  <label className="file-upload-btn">
+    Upload Image
+    <input
+      type="file"
+      accept="image/*"
+      hidden
+      onChange={(e) =>
+        setForm({ ...form, image: e.target.files[0] })
+      }
+    />
+  </label>
 
-        <button className="btn btn-success">
-          Post Item
-        </button>
-      </form>
+  <span className="file-name">
+    {form.image ? form.image.name : "No file selected"}
+  </span>
+</div>
+
+          <button className="primary-btn" type="submit">
+            Post Item
+          </button>
+
+        </form>
+      </div>
     </div>
   );
 }

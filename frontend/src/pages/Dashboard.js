@@ -1,3 +1,5 @@
+import "../App.css";
+
 import { useEffect, useState } from "react";
 import { apiFetch } from "../utils/api";
 import { useNavigate } from "react-router-dom";
@@ -88,7 +90,8 @@ const filteredItems = items.filter((item) => {
   return (
     <>
       {/* ================= NAVBAR ================= */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-light px-3">
+      <nav className="navbar navbar-expand-lg px-3 dashboard-navbar">
+
         <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
           Findora
         </a>
@@ -188,7 +191,8 @@ const filteredItems = items.filter((item) => {
           <div className="row">
             {filteredItems.map((item) => (
               <div className="col-md-4 mb-4" key={item._id}>
-                <div className="card" style={{ width: "18rem" }}>
+                <div className="card dashboard-card" style={{ width: "18rem" }}>
+
                   <img
                     src={item.imageUrl || defaultImage}
                     className="card-img-top"
@@ -241,7 +245,8 @@ const filteredItems = items.filter((item) => {
           className="modal fade show"
           style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+
             <div className="modal-content">
               <div className="modal-header">
                 <h5>{selectedItem.title}</h5>
@@ -257,11 +262,14 @@ const filteredItems = items.filter((item) => {
               </div>
 
               <div className="modal-body">
-                <img
-                  src={selectedItem.imageUrl || defaultImage}
-                  className="img-fluid mb-3"
-                  alt="item"
-                />
+                <div className="modal-image-wrapper">
+  <img
+    src={selectedItem.imageUrl || defaultImage}
+    alt="item"
+    className="modal-image"
+  />
+</div>
+
 
                 <p>{selectedItem.description}</p>
                 <p className="text-muted">
