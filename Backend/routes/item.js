@@ -6,12 +6,12 @@ const Item = require("../models/Item");
 const authMiddleware = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
-// 🔥 CLIP SERVICES (LOCAL, NO API KEY)
+// 🤖 CLIP (LOCAL AI)
 const { getImageEmbedding } = require("../services/clip.service");
 const { cosineSimilarity } = require("../services/matching.service");
 
 /* ======================================================
-   ADD ITEM (LOST / FOUND)
+   ADD ITEM (LOST / FOUND) + AI MATCHING
 ====================================================== */
 router.post(
   "/additem",
@@ -26,35 +26,31 @@ router.post(
         type: req.body.type,
         location: req.body.location,
 
-        // org scoping
         organizationType: req.user.organizationType,
         collegeId: req.user.collegeId || null,
         societyId: req.user.societyId || null,
 
-        // ownership
         postedBy: req.user.userId,
-
-        // image
         imageUrl: req.file ? req.file.path : null,
 
-        // found contact only for found items
         founderContact:
-          req.body.type === "found" ? req.body.founderContact : ""
+          req.body.type === "found" ? req.body.founderContact : "",
+
+        // ✅ defaults (IMPORTANT)
+        visionFeatures: { embedding: [] },
+        matchCandidates: []
       };
 
-      // 1️⃣ CREATE ITEM (UNCHANGED)
+      // 1️⃣ Create item
       const item = await Item.create(itemData);
 
-      /* ======================================================
-         🤖 CLIP IMAGE EMBEDDING + MATCHING
-      ====================================================== */
+      /* ================= CLIP AI MATCHING ================= */
       if (item.imageUrl) {
-        // Generate CLIP embedding
+        // Generate embedding
         const embedding = await getImageEmbedding(item.imageUrl);
-        item.visionFeatures.embedding = embedding;
+        item.visionFeatures = { embedding };
         await item.save();
 
-        // Find opposite-type items
         const oppositeType = item.type === "lost" ? "found" : "lost";
 
         const candidates = await Item.find({
@@ -65,7 +61,6 @@ router.post(
           status: "open"
         });
 
-        // Compare embeddings
         for (const c of candidates) {
           if (!c.visionFeatures?.embedding?.length) continue;
 
@@ -77,8 +72,13 @@ router.post(
             foundItem.visionFeatures.embedding
           );
 
-          // Threshold (tuned for CLIP)
+          console.log("🧠 MATCH SCORE:", score);
+
           if (score >= 0.75) {
+            if (!lostItem.matchCandidates) {
+              lostItem.matchCandidates = [];
+            }
+
             lostItem.matchCandidates.push({
               itemId: foundItem._id,
               score
@@ -96,6 +96,25 @@ router.post(
     }
   }
 );
+
+/* ======================================================
+   GET ITEM BY ID (FOR MATCH VIEW FROM MY ITEMS)
+====================================================== */
+router.get("/by-id/:itemId", authMiddleware, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.itemId)
+      .populate("postedBy", "name email");
+
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    res.json(item);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 /* ======================================================
    GET ALL ITEMS (ORG SCOPED)
@@ -125,7 +144,35 @@ router.get("/getallitems", authMiddleware, async (req, res) => {
 });
 
 /* ======================================================
-   GENERATE QR (UNCHANGED)
+   DELETE MY ITEM (NEW FEATURE)
+====================================================== */
+router.delete("/delete/:itemId", authMiddleware, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.itemId);
+
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    if (item.postedBy.toString() !== req.user.userId) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    if (item.status === "claimed") {
+      return res
+        .status(400)
+        .json({ error: "Cannot delete claimed item" });
+    }
+
+    await item.deleteOne();
+    res.json({ message: "Item deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ======================================================
+   GENERATE QR
 ====================================================== */
 router.post("/generate-qr/:itemId", authMiddleware, async (req, res) => {
   try {
@@ -152,7 +199,7 @@ router.post("/generate-qr/:itemId", authMiddleware, async (req, res) => {
 });
 
 /* ======================================================
-   VERIFY QR (UNCHANGED)
+   VERIFY QR
 ====================================================== */
 router.post("/verify-qr", async (req, res) => {
   try {
@@ -170,7 +217,7 @@ router.post("/verify-qr", async (req, res) => {
 });
 
 /* ======================================================
-   FINAL CLAIM (UNCHANGED)
+   FINAL CLAIM
 ====================================================== */
 router.post("/final-claim", authMiddleware, async (req, res) => {
   try {
