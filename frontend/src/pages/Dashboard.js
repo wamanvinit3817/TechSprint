@@ -1,3 +1,5 @@
+import "../App.css";
+
 import { useEffect, useState } from "react";
 import { apiFetch } from "../utils/api";
 import { useNavigate } from "react-router-dom";
@@ -96,7 +98,12 @@ const filteredItems = items.filter((item) => {
     <>
     <GlobalLoader show={loading} />
       {/* ================= NAVBAR ================= */}
+
+      <nav className="navbar navbar-expand-lg px-3 dashboard-navbar">
+
+
       <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 sticky-top">
+
         <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
           Findora
         </a>
@@ -212,7 +219,8 @@ const filteredItems = items.filter((item) => {
           <div className="row">
             {filteredItems.map((item) => (
               <div className="col-md-4 mb-4" key={item._id}>
-                <div className="card" style={{ width: "18rem" }}>
+                <div className="card dashboard-card" style={{ width: "18rem" }}>
+
                   <img
                     src={item.imageUrl || defaultImage}
                     className="card-img-top"
@@ -269,7 +277,8 @@ const filteredItems = items.filter((item) => {
           className="modal fade show"
           style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+
             <div className="modal-content">
               
               <div className="modal-header">
@@ -286,6 +295,17 @@ const filteredItems = items.filter((item) => {
                 </button>
               </div>
 
+
+              <div className="modal-body">
+                <div className="modal-image-wrapper">
+  <img
+    src={selectedItem.imageUrl || defaultImage}
+    alt="item"
+    className="modal-image"
+  />
+</div>
+
+
             <div
               className="modal-body"
               style={{ maxHeight: "70vh", overflowY: "auto" }}
@@ -295,6 +315,7 @@ const filteredItems = items.filter((item) => {
                   className="img-fluid mb-3"
                   alt="item"
                 />
+
 
                 <p>{selectedItem.description}</p>
                 <p className="text-muted">
