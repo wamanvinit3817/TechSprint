@@ -5,14 +5,13 @@ import defaultImage from "../assets/default-item.png";
 import { QRCodeCanvas } from "qrcode.react";
 
 function Dashboard() {
-  const [orgName, setOrgName] = useState("");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [me, setMe] = useState(null);
 
-  // 🔐 QR state scoped to item
   const [qrData, setQrData] = useState({
     itemId: null,
     token: null
@@ -31,15 +30,17 @@ function Dashboard() {
         `http://localhost:5000/api/items/generate-qr/${itemId}`,
         { method: "POST" }
       );
-
-      setQrData({
-        itemId,
-        token: res.qrToken
-      });
+      setQrData({ itemId, token: res.qrToken });
     } catch (err) {
       alert(err.message);
     }
   };
+
+  useEffect(() => {
+    apiFetch("http://localhost:5000/auth/me")
+      .then((data) => setMe(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const loadItems = async () => {
@@ -54,44 +55,24 @@ function Dashboard() {
         setLoading(false);
       }
     };
-
     loadItems();
   }, []);
 
   useEffect(() => {
-  apiFetch("http://localhost:5000/auth/me")
-    .then((data) => setOrgName(data.name))
-    .catch(() => setOrgName(""));
-}, []);
-const [me, setMe] = useState(null);
-
-useEffect(() => {
-  apiFetch("http://localhost:5000/auth/me")
-    .then((data) => setMe(data))
-    .catch(() => {});
-}, []);
-
-  // Lock background scroll when modal open
-  useEffect(() => {
     document.body.style.overflow = selectedItem ? "hidden" : "auto";
   }, [selectedItem]);
 
-const filteredItems = items.filter((item) => {
-  if (item.status === "claimed") return false;
+  const filteredItems = items.filter((item) => {
+    if (item.status === "claimed") return false;
+    if (filter !== "all" && item.type !== filter) return false;
 
-  const matchesType =
-    filter === "all" || item.type === filter;
-
-  const text = search.toLowerCase();
-
-  const matchesSearch =
-    item.title.toLowerCase().includes(text) ||
-    item.description.toLowerCase().includes(text) ||
-    item.location.toLowerCase().includes(text);
-
-  return matchesType && matchesSearch;
-});
-
+    const text = search.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(text) ||
+      item.description.toLowerCase().includes(text) ||
+      item.location.toLowerCase().includes(text)
+    );
+  });
 
   if (loading) {
     return (
@@ -103,157 +84,146 @@ const filteredItems = items.filter((item) => {
 
   return (
     <>
-      {/* NAVBAR */}
-  <nav className="navbar navbar-expand-lg navbar-light bg-light px-3">
-  {/* LEFT */}
-  <a className="navbar-brand" href="#" style={{fontSize:"1rem"}}>
-    Findora
-  </a>
+      {/* ================= NAVBAR ================= */}
+      <nav className="navbar navbar-expand-lg navbar-light bg-light px-3">
+        <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
+          Findora
+        </a>
 
-  <ul className="navbar-nav mr-auto">
-    <li className="nav-item">
-      <button
-        className="nav-link btn btn-link"
-        onClick={() => setFilter("all")}
-        style={{fontSize:"0.8rem"}}
-      >
-        All
-      </button>
-    </li>
-    <li className="nav-item">
-      <button
-        className="nav-link btn btn-link text-danger"
-        onClick={() => setFilter("lost")}
-         style={{fontSize:"0.8rem"}}
-      >
-        Lost
-      </button>
-    </li>
-    <li className="nav-item">
-      <button
-        className="nav-link btn btn-link text-success"
-        onClick={() => setFilter("found")}
-         style={{fontSize:"0.8rem"}}
-      >
-        Found
-      </button>
-    </li>
-  </ul>
+        <ul className="navbar-nav mr-auto">
+          <li className="nav-item">
+            <button
+              className="nav-link btn btn-link"
+              onClick={() => setFilter("all")}
+              style={{ fontSize: "0.8rem" }}
+            >
+              All
+            </button>
+          </li>
+          <li className="nav-item">
+            <button
+              className="nav-link btn btn-link text-danger"
+              onClick={() => setFilter("lost")}
+              style={{ fontSize: "0.8rem" }}
+            >
+              Lost
+            </button>
+          </li>
+          <li className="nav-item">
+            <button
+              className="nav-link btn btn-link text-success"
+              onClick={() => setFilter("found")}
+              style={{ fontSize: "0.8rem" }}
+            >
+              Found
+            </button>
+          </li>
+        </ul>
 
-  {/* CENTER SEARCH */}
-  <form
-    className="form-inline mx-auto"
-    onSubmit={(e) => e.preventDefault()}
-  >
-    <input
-      className="form-control mr-2"
-      type="search"
-      placeholder="Search items..."
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-      style={{ width: "200px" }}
-    />
-    <button className="btn btn-outline-success"  style={{fontSize:"0.8rem"}}> 
-      Search
-    </button>
-  </form>
+        <form
+          className="form-inline mx-auto"
+          onSubmit={(e) => e.preventDefault()}
+        >
+          <input
+            className="form-control mr-2"
+            placeholder="Search items..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: "200px" }}
+          />
+          <button className="btn btn-outline-success" style={{ fontSize: "0.8rem" }}>
+            Search
+          </button>
+        </form>
 
-  {/* RIGHT */}
-  <div className="d-flex align-items-center">
-    {me?.organization?.name && (
-      <span className="badge bg-dark text-white mr-3 px-3 py-2">
-        {me?.organization?.name}
-      </span>
-    )}
+        <div className="d-flex align-items-center">
+          {me?.organization?.name && (
+            <span className="badge bg-dark text-white mr-3 px-3 py-2">
+              {me.organization.name}
+            </span>
+          )}
 
-    <button
-      className="btn btn-outline-primary mr-2"
-      onClick={() => navigate("/add-item")}
-       style={{fontSize:"0.8rem"}}
-    >
-      + Add Item
-    </button>
+          <button
+            className="btn btn-outline-primary mr-2"
+            onClick={() => navigate("/add-item")}
+            style={{ fontSize: "0.8rem" }}
+          >
+            + Add Item
+          </button>
 
-    <button
-      className="btn btn-outline-secondary mr-2"
-      onClick={() => navigate("/history")}
-       style={{fontSize:"0.8rem"}}
-    >
-      My Items
-    </button>
+          <button
+            className="btn btn-outline-secondary mr-2"
+            onClick={() => navigate("/history")}
+            style={{ fontSize: "0.8rem" }}
+          >
+            My Items
+          </button>
 
-    <button
-      className="btn btn-outline-danger"
-      onClick={handleLogout}
-       style={{fontSize:"0.8rem"}}
-    >
-      Logout
-    </button>
-   {me && (
-  <div className="text-right ml-3">
-    <div style={{ fontSize: "0.7rem", fontWeight: 500 }}>
-      👤 {me.user?.name}
-    </div>
-    {/* <div style={{ fontSize: "0.75rem", color: "#666" }}>
-      {me.organization?.name}
-    </div> */}
-  </div>
-)}
-  </div>
-</nav>
+          <button
+            className="btn btn-outline-danger"
+            onClick={handleLogout}
+            style={{ fontSize: "0.8rem" }}
+          >
+            Logout
+          </button>
 
-      {/* CONTENT */}
+          {me && (
+            <div className="text-right ml-3">
+              <div style={{ fontSize: "0.7rem", fontWeight: 500 }}>
+                👤 {me.user?.name}
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      {/* ================= ITEMS ================= */}
       <div className="container mt-4">
         {filteredItems.length === 0 ? (
-          <div className="alert alert-info">
-            No matching items found
-          </div>
+          <div className="alert alert-info">No matching items found</div>
         ) : (
           <div className="row">
             {filteredItems.map((item) => (
               <div className="col-md-4 mb-4" key={item._id}>
                 <div className="card" style={{ width: "18rem" }}>
-                 <img
-                  src={item.imageUrl || defaultImage}
-                  className="card-img-top"
-                  alt="Item"
-                  style={{
-                    height: "200px",
-                    objectFit: "contain",
-                    backgroundColor: "#f8f9fa"
-                  }}
-                />
+                  <img
+                    src={item.imageUrl || defaultImage}
+                    className="card-img-top"
+                    alt="Item"
+                    style={{
+                      height: "200px",
+                      objectFit: "contain",
+                      backgroundColor: "#f8f9fa"
+                    }}
+                  />
 
                   <div className="card-body">
-                    <div className="d-flex justify-content-between align-items-start mb-2">
-                      <h5 className="card-title">{item.title}</h5>
+                    <div className="d-flex justify-content-between mb-2">
+                      <h5>{item.title}</h5>
                       <span
                         className={`badge ${
-                          item.type === "lost"
-                            ? "bg-danger"
-                            : "bg-success"
+                          item.type === "lost" ? "bg-danger" : "bg-success"
                         }`}
                       >
                         {item.type.toUpperCase()}
                       </span>
                     </div>
-                    <p className="text-muted mb-1" style={{ fontSize: "0.85rem" }}>
-  Posted by: <strong>{item.postedBy?.name}</strong>
-</p>
 
-                    <p className="card-text">{item.description}</p>
-                    <p className="text-muted mb-2"><i class="fa-solid fa-location-dot"></i>{item.location}</p>
+                    <p className="text-muted mb-1">
+                      Posted by: <strong>{item.postedBy?.name}</strong>
+                    </p>
 
-                    <div className="d-flex gap-2">
-                      <button
-                        className="btn btn-outline-primary w-50 mx-2"
-                        onClick={() => setSelectedItem(item)}
-                      >
-                        View Details
-                      </button>
+                    <p>{item.description}</p>
+                    <p className="text-muted">
+                      <i className="fa-solid fa-location-dot"></i> {item.location}
+                    </p>
 
-                     
-                    </div>
+                    <button
+                      className="btn btn-outline-primary w-100"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      View Details
+                    </button>
                   </div>
                 </div>
               </div>
@@ -262,7 +232,7 @@ const filteredItems = items.filter((item) => {
         )}
       </div>
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       {selectedItem && (
         <div
           className="modal fade show"
@@ -271,9 +241,8 @@ const filteredItems = items.filter((item) => {
           <div className="modal-dialog modal-lg modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">{selectedItem.title}</h5>
+                <h5>{selectedItem.title}</h5>
                 <button
-                  type="button"
                   className="close"
                   onClick={() => {
                     setSelectedItem(null);
@@ -284,34 +253,61 @@ const filteredItems = items.filter((item) => {
                 </button>
               </div>
 
-              <div
-                className="modal-body"
-                style={{ maxHeight: "70vh", overflowY: "auto" }}
-              >
+              <div className="modal-body">
                 <img
                   src={selectedItem.imageUrl || defaultImage}
-                  alt="Item"
                   className="img-fluid mb-3"
+                  alt="item"
                 />
 
-                <span
-                  className={`badge mb-2 ${
-                    selectedItem.type === "lost"
-                      ? "bg-danger"
-                      : "bg-success"
-                  }`}
-                >
-                  {selectedItem.type.toUpperCase()}
-                </span>
+                <p>{selectedItem.description}</p>
+                <p className="text-muted">
+                  <i className="fa-solid fa-location-dot"></i>{" "}
+                  {selectedItem.location}
+                </p>
 
-                <p className="mt-2">{selectedItem.description}</p>
-                <p className="text-muted"><i class="fa-solid fa-location-dot"></i> {selectedItem.location}</p>
-               {selectedItem.type === "found" && selectedItem.founderContact && (
-                  <div className="alert alert-info mt-3">
-                    <strong>Contact Finder:</strong><br />
-                    {selectedItem.founderContact}
-                  </div>
-                )}
+                {/* 🔥 MATCH SECTION */}
+                {selectedItem.type === "lost" &&
+                  selectedItem.matchCandidates?.length > 0 && (
+                    <div className="alert alert-warning mt-3">
+                      <h6>🔍 Possible Matches</h6>
+
+                      {selectedItem.matchCandidates.map((m, i) => {
+                        const found = items.find((x) => x._id === m.itemId);
+                        if (!found) return null;
+
+                        return (
+                          <div
+                            key={i}
+                            className="d-flex align-items-center border rounded p-2 mb-2"
+                            style={{ cursor: "pointer" }}
+                            onClick={() => setSelectedItem(found)}
+                          >
+                            <img
+                              src={found.imageUrl || defaultImage}
+                              width="55"
+                              className="me-2 rounded"
+                              alt="match"
+                            />
+                            <div>
+                              <strong>{found.title}</strong>
+                              <div>
+                                Confidence: {Math.round(m.score * 100)}%
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                {selectedItem.type === "found" &&
+                  selectedItem.founderContact && (
+                    <div className="alert alert-info">
+                      <strong>Contact Finder:</strong><br />
+                      {selectedItem.founderContact}
+                    </div>
+                  )}
 
                 {qrData.token &&
                   qrData.itemId === selectedItem._id && (
@@ -320,9 +316,6 @@ const filteredItems = items.filter((item) => {
                         value={`http://localhost:3000/verify-claim?token=${qrData.token}`}
                         size={200}
                       />
-                      <p className="text-muted mt-2">
-                        Ask the owner to scan this QR (valid for 5 minutes)
-                      </p>
                     </div>
                   )}
               </div>

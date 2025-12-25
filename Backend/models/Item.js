@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const ItemSchema = new mongoose.Schema(
   {
+    // ================= BASIC INFO =================
     title: {
       type: String,
       required: true,
@@ -35,19 +36,27 @@ const ItemSchema = new mongoose.Schema(
       default: Date.now
     },
 
+    // ================= STATUS =================
     status: {
       type: String,
       enum: ["open", "claimed"],
       default: "open"
     },
 
-   
+    // ================= USER RELATION =================
     postedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true
     },
 
+    claimedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    // ================= ORGANIZATION =================
     organizationType: {
       type: String,
       enum: ["college", "society"],
@@ -65,40 +74,52 @@ const ItemSchema = new mongoose.Schema(
       ref: "Society",
       default: null
     },
-      imageUrl: {
-        type: String,
-        default: null
+
+    // ================= IMAGE =================
+    imageUrl: {
+      type: String,
+      default: null
     },
-    status: {
-  type: String,
-  enum: ["open", "claimed"],
-  default: "open"
-},
 
-claimedBy: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "User",
-  default: null
-},
+    // ================= FOUND ITEM CONTACT =================
+    founderContact: {
+      type: String,
+      default: ""
+    },
 
-qrToken: {
-  type: String,
-  default: null
-},
+    // ================= QR CLAIM FLOW =================
+    qrToken: {
+      type: String,
+      default: null
+    },
 
-qrExpiresAt: {
-  type: Date,
-  default: null
-},
-founderContact: {
-  type: String,
-  default: ""
-},
+    qrExpiresAt: {
+      type: Date,
+      default: null
+    },
 
+    // ================= CLIP AI FEATURES (NEW) =================
+    visionFeatures: {
+      embedding: {
+        type: [Number],
+        default: []
+      }
+    },
+
+    // ================= MATCH RESULTS (NEW) =================
+    matchCandidates: [
+      {
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Item"
+        },
+        score: {
+          type: Number
+        }
+      }
+    ]
   },
-  
-
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Item", ItemSchema); 
+module.exports = mongoose.model("Item", ItemSchema);
