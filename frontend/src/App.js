@@ -5,11 +5,14 @@ import AuthSuccess from "./pages/AuthSuccess";
 import Dashboard from "./pages/Dashboard";
 import SocietyLogin from "./pages/SocietyLogin";
 import CollegeCodeLogin from "./pages/CollegecodeLogin";
+
+import "./App.css";
+
 import VerifyClaim from "./pages/VerifyClaim";
 import AddItem from "./pages/Additem";
 import History from "./pages/History";
 
-import "./App.css"
+
 
 function App() {
   return (
