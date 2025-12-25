@@ -5,31 +5,39 @@ import defaultImage from "../assets/default-item.png";
 import { QRCodeCanvas } from "qrcode.react";
 
 function History() {
-  const [items, setItems] = useState([]);
+  const [postedItems, setPostedItems] = useState([]);
+  const [claimedItems, setClaimedItems] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [selectedItem, setSelectedItem] = useState(null);
   const [qrData, setQrData] = useState({ itemId: null, token: null });
 
-  // 🔥 cache for matched item previews
+  // 🔥 cache matched item previews
   const [matchedCache, setMatchedCache] = useState({});
 
   const navigate = useNavigate();
 
-  /* ================= LOAD MY ITEMS ================= */
+  /* ================= LOAD DATA ================= */
   useEffect(() => {
-    const loadItems = async () => {
+    const loadAll = async () => {
       try {
-        const data = await apiFetch(
+        const posted = await apiFetch(
           "http://localhost:5000/api/items/my-posted"
         );
-        setItems(data);
+        const claimed = await apiFetch(
+          "http://localhost:5000/api/items/my-claimed"
+        );
+
+        setPostedItems(posted);
+        setClaimedItems(claimed);
       } catch (err) {
         alert(err.message);
       } finally {
         setLoading(false);
       }
     };
-    loadItems();
+
+    loadAll();
   }, []);
 
   /* ================= DELETE ITEM ================= */
@@ -41,7 +49,8 @@ function History() {
         `http://localhost:5000/api/items/delete/${itemId}`,
         { method: "DELETE" }
       );
-      setItems((prev) => prev.filter((i) => i._id !== itemId));
+
+      setPostedItems((prev) => prev.filter((i) => i._id !== itemId));
     } catch (err) {
       alert(err.message);
     }
@@ -69,13 +78,13 @@ function History() {
       setSelectedItem(item);
       setQrData({ itemId: null, token: null });
     } catch {
-      alert("Unable to load matched item");
+      alert("Matched item no longer exists");
     }
   };
 
-  /* ================= LOAD MATCH PREVIEW (CACHE) ================= */
+  /* ================= LOAD MATCH PREVIEW ================= */
   const loadMatchedPreview = async (itemId) => {
-    if (matchedCache[itemId]) return;
+    if (matchedCache[itemId] !== undefined) return;
 
     try {
       const item = await apiFetch(
@@ -87,7 +96,11 @@ function History() {
         [itemId]: item
       }));
     } catch {
-      // silent fail
+      // ❗ mark deleted items as null
+      setMatchedCache((prev) => ({
+        ...prev,
+        [itemId]: null
+      }));
     }
   };
 
@@ -101,7 +114,7 @@ function History() {
 
   return (
     <div className="container mt-4">
-      <div className="d-flex justify-content-between mb-3">
+      <div className="d-flex justify-content-between mb-4">
         <h4>My Items</h4>
         <button
           className="btn btn-outline-secondary"
@@ -111,11 +124,14 @@ function History() {
         </button>
       </div>
 
-      {items.length === 0 ? (
+      {/* ================= MY POSTED ITEMS ================= */}
+      <h5 className="mb-3">📦 My Posted Items</h5>
+
+      {postedItems.length === 0 ? (
         <div className="alert alert-info">No items posted yet</div>
       ) : (
-        <div className="row">
-          {items.map((item) => (
+        <div className="row mb-5">
+          {postedItems.map((item) => (
             <div className="col-md-4 mb-4" key={item._id}>
               <div className="card">
                 <img
@@ -143,12 +159,15 @@ function History() {
                     </span>
                   </div>
 
-                  <p className="text-muted">
-                    <i className="fa-solid fa-location-dot"></i>{" "}
-                    {item.location}
-                  </p>
+                  <p className="text-muted">{item.location}</p>
 
-                  <div className="d-flex gap-2">
+                  {item.status === "claimed" && (
+                    <span className="badge bg-secondary mb-2">
+                      CLAIMED
+                    </span>
+                  )}
+
+                  <div className="d-flex gap-2 mt-2">
                     <button
                       className="btn btn-outline-primary"
                       onClick={() => {
@@ -168,6 +187,52 @@ function History() {
                       </button>
                     )}
                   </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ================= MY CLAIMED ITEMS ================= */}
+      <h5 className="mb-3">✅ My Claimed Items</h5>
+
+      {claimedItems.length === 0 ? (
+        <div className="alert alert-info">
+          You haven’t claimed any items yet
+        </div>
+      ) : (
+        <div className="row">
+          {claimedItems.map((item) => (
+            <div className="col-md-4 mb-4" key={item._id}>
+              <div className="card border-success">
+                <img
+                  src={item.imageUrl || defaultImage}
+                  className="card-img-top"
+                  alt="item"
+                  style={{
+                    height: "200px",
+                    objectFit: "contain",
+                    backgroundColor: "#f8f9fa"
+                  }}
+                />
+
+                <div className="card-body">
+                  <h5>{item.title}</h5>
+                  <p className="text-muted">{item.location}</p>
+                  <span className="badge bg-success mb-2">
+                    CLAIMED
+                  </span>
+
+                  <button
+                    className="btn btn-outline-primary"
+                    onClick={() => {
+                      setSelectedItem(item);
+                      setQrData({ itemId: null, token: null });
+                    }}
+                  >
+                    View Details
+                  </button>
                 </div>
               </div>
             </div>
@@ -204,12 +269,9 @@ function History() {
                 />
 
                 <p>{selectedItem.description}</p>
-                <p className="text-muted">
-                  <i className="fa-solid fa-location-dot"></i>{" "}
-                  {selectedItem.location}
-                </p>
+                <p className="text-muted">{selectedItem.location}</p>
 
-                {/* 🔍 POSSIBLE MATCHES (IMAGE + TITLE) */}
+                {/* 🔍 POSSIBLE MATCHES (SAFE AGAINST DELETED ITEMS) */}
                 {selectedItem.type === "lost" &&
                   selectedItem.matchCandidates?.length > 0 && (
                     <div className="alert alert-warning mt-3">
@@ -217,7 +279,13 @@ function History() {
 
                       {selectedItem.matchCandidates.map((m, i) => {
                         const preview = matchedCache[m.itemId];
-                        if (!preview) loadMatchedPreview(m.itemId);
+
+                        // skip deleted items
+                        if (preview === null) return null;
+
+                        if (!preview) {
+                          loadMatchedPreview(m.itemId);
+                        }
 
                         return (
                           <div
@@ -251,11 +319,7 @@ function History() {
                                 {preview?.title ||
                                   "Matched Item"}
                               </strong>
-                              <div
-                                style={{
-                                  fontSize: "0.85rem"
-                                }}
-                              >
+                              <div style={{ fontSize: "0.85rem" }}>
                                 Confidence:{" "}
                                 {Math.round(m.score * 100)}%
                               </div>
@@ -263,15 +327,6 @@ function History() {
                           </div>
                         );
                       })}
-                    </div>
-                  )}
-
-                {selectedItem.type === "found" &&
-                  selectedItem.founderContact && (
-                    <div className="alert alert-info">
-                      <strong>Contact Finder:</strong>
-                      <br />
-                      {selectedItem.founderContact}
                     </div>
                   )}
 

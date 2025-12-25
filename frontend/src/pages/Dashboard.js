@@ -62,17 +62,20 @@ function Dashboard() {
     document.body.style.overflow = selectedItem ? "hidden" : "auto";
   }, [selectedItem]);
 
-  const filteredItems = items.filter((item) => {
-    if (item.status === "claimed") return false;
-    if (filter !== "all" && item.type !== filter) return false;
+const filteredItems = items.filter((item) => {
+  // ✅ hide claimed items only
+  if (item.status === "claimed") return false;
 
-    const text = search.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(text) ||
-      item.description.toLowerCase().includes(text) ||
-      item.location.toLowerCase().includes(text)
-    );
-  });
+  if (filter !== "all" && item.type !== filter) return false;
+
+  const text = search.toLowerCase();
+  return (
+    item.title.toLowerCase().includes(text) ||
+    item.description.toLowerCase().includes(text) ||
+    item.location.toLowerCase().includes(text)
+  );
+});
+
 
   if (loading) {
     return (

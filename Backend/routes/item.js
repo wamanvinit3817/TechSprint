@@ -144,7 +144,7 @@ router.get("/getallitems", authMiddleware, async (req, res) => {
 });
 
 /* ======================================================
-   DELETE MY ITEM (NEW FEATURE)
+   DELETE ITEM (CLEAN MATCH REFERENCES)
 ====================================================== */
 router.delete("/delete/:itemId", authMiddleware, async (req, res) => {
   try {
@@ -154,22 +154,26 @@ router.delete("/delete/:itemId", authMiddleware, async (req, res) => {
       return res.status(404).json({ error: "Item not found" });
     }
 
+    // only owner can delete
     if (item.postedBy.toString() !== req.user.userId) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    if (item.status === "claimed") {
-      return res
-        .status(400)
-        .json({ error: "Cannot delete claimed item" });
-    }
+    // 🔥 REMOVE THIS ITEM FROM ALL MATCH CANDIDATES
+    await Item.updateMany(
+      { "matchCandidates.itemId": item._id },
+      { $pull: { matchCandidates: { itemId: item._id } } }
+    );
 
+    // delete item itself
     await item.deleteOne();
+
     res.json({ message: "Item deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 /* ======================================================
    GENERATE QR
