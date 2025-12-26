@@ -8,11 +8,8 @@ import { useAlert } from "../context/AlertContext";
 import { timeAgo } from "../utils/time";
 import GlobalLoader from "./GlobalLoader";
 
-
 function Dashboard() {
-  
-
-   const { showAlert } = useAlert();
+  const { showAlert } = useAlert();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("all");
@@ -20,10 +17,7 @@ function Dashboard() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [me, setMe] = useState(null);
   const [qrLoading, setQrLoading] = useState(false);
-  const [qrData, setQrData] = useState({
-    itemId: null,
-    token: null
-  });
+  const [qrData, setQrData] = useState({ itemId: null, token: null });
 
   const navigate = useNavigate();
 
@@ -34,17 +28,16 @@ function Dashboard() {
 
   const generateQR = async (itemId) => {
     try {
-      setQrLoading(true)
+      setQrLoading(true);
       const res = await apiFetch(
         `http://localhost:5000/api/items/generate-qr/${itemId}`,
         { method: "POST" }
       );
       setQrData({ itemId, token: res.qrToken });
     } catch (err) {
-     showAlert("danger","Only founder is allowed to generate QR")
-    }
-    finally{
-      setQrLoading(false)
+      showAlert("danger", "Only founder can generate QR");
+    } finally {
+      setQrLoading(false);
     }
   };
 
@@ -57,13 +50,11 @@ function Dashboard() {
   useEffect(() => {
     const loadItems = async () => {
       try {
-        setLoading(true)
-        const data = await apiFetch(
-          "http://localhost:5000/api/items/getallitems"
-        );
+        setLoading(true);
+        const data = await apiFetch("http://localhost:5000/api/items/getallitems");
         setItems(data);
-      } catch (err) {
-        showAlert("danger","Server error")
+      } catch {
+        showAlert("danger", "Server error");
       } finally {
         setLoading(false);
       }
@@ -75,136 +66,83 @@ function Dashboard() {
     document.body.style.overflow = selectedItem ? "hidden" : "auto";
   }, [selectedItem]);
 
-const filteredItems = items.filter((item) => {
-  // ✅ hide claimed items only
-  if (item.status === "claimed") return false;
+  /* ======================================================
+     ✅ FIXED FILTER LOGIC
+  ====================================================== */
+  const filteredItems = items.filter((item) => {
+    const text = search.toLowerCase();
 
-  if (filter !== "all" && item.type !== filter) return false;
+    const matchesSearch =
+      item.title.toLowerCase().includes(text) ||
+      item.description.toLowerCase().includes(text) ||
+      item.location.toLowerCase().includes(text);
 
-  const text = search.toLowerCase();
-  return (
-    item.title.toLowerCase().includes(text) ||
-    item.description.toLowerCase().includes(text) ||
-    item.location.toLowerCase().includes(text)
-  );
-});
+    if (filter === "claimed") {
+      return item.status === "claimed" && matchesSearch;
+    }
 
+    if (filter === "lost") {
+      return item.status === "open" && item.type === "lost" && matchesSearch;
+    }
 
+    if (filter === "found") {
+      return item.status === "open" && item.type === "found" && matchesSearch;
+    }
 
+    return matchesSearch;
+  });
 
   return (
     <>
-    <GlobalLoader show={loading} />
+      <GlobalLoader show={loading} />
+      <GlobalAlert />
+
       {/* ================= NAVBAR ================= */}
       <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 sticky-top">
-        <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
-          Findora
-        </a>
+        <a className="navbar-brand">Findora</a>
 
-       <ul className="navbar-nav mr-auto">
-  <li className="nav-item">
-    <button
-      className={`nav-link btn btn-link ${filter === "all" ? "fw-bold" : ""}`}
-      onClick={() => setFilter("all")}
-    >
-      All
-    </button>
-  </li>
+        <ul className="navbar-nav mr-auto">
+          {["all", "lost", "found", "claimed"].map((f) => (
+            <li className="nav-item" key={f}>
+              <button
+                className={`nav-link btn btn-link ${filter === f ? "fw-bold" : ""}`}
+                onClick={() => setFilter(f)}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            </li>
+          ))}
+        </ul>
 
-  <li className="nav-item">
-    <button
-      className={`nav-link btn btn-link text-danger ${filter === "lost" ? "fw-bold" : ""}`}
-      onClick={() => setFilter("lost")}
-    >
-      Lost
-    </button>
-  </li>
+        <input
+          className="form-control mx-2"
+          placeholder="Search items..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: "200px" }}
+        />
 
-  <li className="nav-item">
-    <button
-      className={`nav-link btn btn-link text-success ${filter === "found" ? "fw-bold" : ""}`}
-      onClick={() => setFilter("found")}
-    >
-      Found
-    </button>
-  </li>
+        <button className="btn btn-outline-primary me-2" onClick={() => navigate("/add-item")}>
+          + Add Item
+        </button>
 
-  <li className="nav-item">
-    <button
-      className={`nav-link btn btn-link text-secondary ${filter === "claimed" ? "fw-bold" : ""}`}
-      onClick={() => setFilter("claimed")}
-    >
-      Claimed
-    </button>
-  </li>
-</ul>
+        <button className="btn btn-outline-secondary me-2" onClick={() => navigate("/history")}>
+          My Items
+        </button>
 
-        <form
-          className="form-inline mx-auto"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          <input
-            className="form-control mr-2"
-            placeholder="Search items..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "200px" }}
-          />
-          <button className="btn btn-outline-success" style={{ fontSize: "0.8rem" }}>
-            Search
-          </button>
-        </form>
+        <button className="btn btn-outline-danger" onClick={handleLogout}>
+          Logout
+        </button>
 
-     
-
-
-          <button
-            className="btn btn-outline-primary mr-2"
-            onClick={() => navigate("/add-item")}
-            style={{ fontSize: "0.8rem" }}
-          >
-            + Add Item
-          </button>
-
-          <button
-            className="btn btn-outline-secondary mr-2"
-            onClick={() => navigate("/history")}
-            style={{ fontSize: "0.8rem" }}
-          >
-            My Items
-          </button>
-
-          <button
-            className="btn btn-outline-danger"
-            onClick={handleLogout}
-            style={{ fontSize: "0.8rem" }}
-          >
-            Logout
-          </button>
-
-         {me && (
-  <div className="text-right ml-3">
-    <div className="user-meta d-flex flex-column align-items-center justify-content-center">
-      
-      <div className="user-name">
-        <i className="fa-solid fa-user"></i> {me.user?.name}
-      </div>
-
-      <div className="user-divider"></div>
-
-      <div className="user-org">
-        <i className="fa-solid fa-landmark"></i> {me?.organization?.name}
-      </div>
-
-    </div>
-  </div>
-)}
-
+        {me && (
+          <div className="ms-3 text-center">
+            <div><b>{me.user?.name}</b></div>
+            <small>{me.organization?.name}</small>
+          </div>
+        )}
       </nav>
 
-      <GlobalAlert/>
-
-      {/* ================= ITEMS ================= */}
+      {/* ================= ITEMS GRID ================= */}
       <div className="container mt-4">
         {filteredItems.length === 0 ? (
           <div className="alert alert-info">No matching items found</div>
@@ -212,41 +150,49 @@ const filteredItems = items.filter((item) => {
           <div className="row">
             {filteredItems.map((item) => (
               <div className="col-md-4 mb-4" key={item._id}>
-                <div className="card" style={{ width: "18rem" }}>
+                <div className="card">
                   <img
                     src={item.imageUrl || defaultImage}
                     className="card-img-top"
-                    alt="Item"
-                    style={{
-                      height: "200px",
-                      objectFit: "contain",
-                      backgroundColor: "#f8f9fa"
-                    }}
+                    style={{ height: 200, objectFit: "contain" }}
+                    alt=""
                   />
 
                   <div className="card-body">
-                    <div className="d-flex justify-content-between mb-2">
+                    <div className="d-flex justify-content-between">
                       <h5>{item.title}</h5>
                       <span
                         className={`badge ${
-                          item.type === "lost" ? "bg-danger" : "bg-success"
+                          item.status === "claimed"
+                            ? "bg-secondary"
+                            : item.type === "lost"
+                            ? "bg-danger"
+                            : "bg-success"
                         }`}
                       >
-                        {item.type.toUpperCase()}
+                        {item.status === "claimed"
+                          ? "CLAIMED"
+                          : item.type.toUpperCase()}
                       </span>
                     </div>
 
-                    <p className="text-muted mb-1">
-                      <i class="fa-solid fa-user"></i> Posted by: <strong>{item.postedBy?.name}</strong>
+                    <p className="text-muted">
+                      <i className="fa-solid fa-user"></i>{" "}
+                      {item.postedBy?.name}
                     </p>
 
-                    <p className="text-muted mb-1" style={{fontSize:"0.8rem"}}>
-                          <i class="fa-regular fa-clock"></i> {timeAgo(item.createdAt)}
-                        </p>
+                    {item.status === "claimed" && item.claimedBy && (
+                      <p className="text-success">
+                        <i className="fa-solid fa-user-check"></i>{" "}
+                        Claimed by: <b>{item.claimedBy.name}</b>
+                      </p>
+                    )}
 
-                    <p> <i class="fa-regular fa-comment"></i> {item.description}</p>
-                    <p className="text-muted my-2">
-                      <i className="fa-solid fa-location-dot"></i> {item.location}
+                    <p>{item.description}</p>
+
+                    <p className="text-muted">
+                      <i className="fa-solid fa-location-dot"></i>{" "}
+                      {item.location}
                     </p>
 
                     <button
@@ -265,124 +211,66 @@ const filteredItems = items.filter((item) => {
 
       {/* ================= MODAL ================= */}
       {selectedItem && (
-        <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show" style={{ display: "block", background: "rgba(0,0,0,0.6)" }}>
           <div className="modal-dialog modal-lg modal-dialog-scrollable">
             <div className="modal-content">
-              
               <div className="modal-header">
-              
                 <h5>{selectedItem.title}</h5>
-                <button
-                  className="close"
-                  onClick={() => {
-                    setSelectedItem(null);
-                    setQrData({ itemId: null, token: null });
-                  }}
-                >
-                  <span>&times;</span>
+                <button className="close" onClick={() => setSelectedItem(null)}>
+                  ×
                 </button>
               </div>
 
-            <div
-              className="modal-body"
-              style={{ maxHeight: "70vh", overflowY: "auto" }}
-            >
+              <div className="modal-body">
                 <img
                   src={selectedItem.imageUrl || defaultImage}
                   className="img-fluid mb-3"
-                  alt="item"
+                  alt=""
                 />
 
                 <p>{selectedItem.description}</p>
-                <p className="text-muted">
-                  <i className="fa-solid fa-location-dot"></i>{" "}
-                  {selectedItem.location}
+
+                <p>
+                  <b>Location:</b> {selectedItem.location}
                 </p>
 
-                {/* 🔥 MATCH SECTION */}
-                {selectedItem.type === "lost" &&
-                  selectedItem.matchCandidates?.length > 0 && (
-                    <div className="alert alert-warning mt-3">
-                      <h6>🔍 Possible Matches</h6>
+                {selectedItem.status === "claimed" && selectedItem.claimedBy && (
+                  <div className="alert alert-success">
+                    ✅ Claimed by <strong>{selectedItem.claimedBy.name}</strong>
+                  </div>
+                )}
 
-                      {selectedItem.matchCandidates.map((m, i) => {
-                        const found = items.find((x) => x._id === m.itemId);
-                        if (!found) return null;
+                {selectedItem.type === "found" && selectedItem.founderContact && (
+                  <div className="alert alert-info">
+                    <b>Contact:</b> {selectedItem.founderContact}
+                  </div>
+                )}
 
-                        return (
-                          <div
-                            key={i}
-                            className="d-flex align-items-center border rounded p-2 mb-2"
-                            style={{ cursor: "pointer" }}
-                            onClick={() => setSelectedItem(found)}
-                          >
-                            <img
-                              src={found.imageUrl || defaultImage}
-                              width="55"
-                              className="me-2 rounded"
-                              alt="match"
-                            />
-                            <div>
-                              <strong>{found.title}</strong>
-                              <div>
-                                Confidence: {Math.round(m.score * 100)}%
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-               {selectedItem.type === "found" &&
-  selectedItem.founderContact && (
-    <div className="modal-contact-card">
-      <div className="modal-contact-header">
-        <i class="fa-solid fa-users-rectangle"></i> Contact Finder
-      </div>
-
-      <div className="modal-contact-body">
-        {selectedItem.founderContact}
-      </div>
-    </div>
-)}
-
-
-                {qrData.token &&
-                  qrData.itemId === selectedItem._id && (
-                    <div className="text-center mt-3">
-                      <QRCodeCanvas
-                        value={`http://localhost:3000/verify-claim?token=${qrData.token}`}
-                        size={200}
-                      />
-                    </div>
-                  )}
+                {qrData.token && qrData.itemId === selectedItem._id && (
+                  <div className="text-center mt-3">
+                    <QRCodeCanvas
+                      value={`http://localhost:3000/verify-claim?token=${qrData.token}`}
+                      size={200}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setSelectedItem(null);
-                    setQrData({ itemId: null, token: null });
-                  }}
-                >
+                <button className="btn btn-secondary" onClick={() => setSelectedItem(null)}>
                   Close
                 </button>
 
-                      {selectedItem.type === "found" && (
-            <button
-              className="btn btn-primary"
-              onClick={() => generateQR(selectedItem._id)}
-              disabled={qrLoading}
-            >
-              {qrLoading ? "Generating..." : "Generate QR"}
-            </button>
-          )}
-
+                {selectedItem.type === "found" &&
+                  selectedItem.status !== "claimed" && (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => generateQR(selectedItem._id)}
+                      disabled={qrLoading}
+                    >
+                      {qrLoading ? "Generating..." : "Generate QR"}
+                    </button>
+                  )}
               </div>
             </div>
           </div>

@@ -6,12 +6,11 @@ const Item = require("../models/Item");
 const authMiddleware = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
-// 🤖 CLIP (LOCAL AI)
 const { getImageEmbedding } = require("../services/clip.service");
 const { cosineSimilarity } = require("../services/matching.service");
 
 /* ======================================================
-   ADD ITEM (LOST / FOUND) + AI MATCHING
+   ADD ITEM + AI MATCHING (FINAL SAFE VERSION)
 ====================================================== */
 router.post(
   "/additem",
@@ -36,91 +35,95 @@ router.post(
         founderContact:
           req.body.type === "found" ? req.body.founderContact : "",
 
-        // ✅ defaults (IMPORTANT)
         visionFeatures: { embedding: [] },
         matchCandidates: []
       };
 
-       // 🚫 Prevent duplicate post by same uploader (title + location)
-            const duplicate = await Item.findOne({
-          postedBy: req.user.userId,
-          title: { $regex: `^${req.body.title}$`, $options: "i" },
-          location: { $regex: `^${req.body.location}$`, $options: "i" },
-          status: "open"
-        });
-
-        if (duplicate) {
-          return res.status(409).json({ error: "duplicate_item" });
-        }
-
-
-      // 1️⃣ Create item
       const item = await Item.create(itemData);
 
-      /* ================= CLIP AI MATCHING ================= */
-      if (item.imageUrl) {
-        // Generate embedding
-        const embedding = await getImageEmbedding(item.imageUrl);
-        item.visionFeatures = { embedding };
-        await item.save();
+      if (!item.imageUrl) return res.json(item);
 
-        const oppositeType = item.type === "lost" ? "found" : "lost";
+      // Generate embedding
+      const embedding = await getImageEmbedding(item.imageUrl);
 
-        const candidates = await Item.find({
-          type: oppositeType,
-          organizationType: item.organizationType,
-          collegeId: item.collegeId || null,
-          societyId: item.societyId || null,
-          status: "open"
-        });
+      await Item.updateOne(
+        { _id: item._id },
+        { $set: { "visionFeatures.embedding": embedding } }
+      );
 
-        for (const c of candidates) {
-          if (!c.visionFeatures?.embedding?.length) continue;
+      const oppositeType = item.type === "lost" ? "found" : "lost";
 
-          const lostItem = item.type === "lost" ? item : c;
-          const foundItem = item.type === "found" ? item : c;
+      const filter = {
+        type: oppositeType,
+        status: "open"
+      };
 
-          const score = cosineSimilarity(
-            lostItem.visionFeatures.embedding,
-            foundItem.visionFeatures.embedding
-          );
+      if (item.organizationType === "college") {
+        filter.collegeId = item.collegeId;
+      }
 
-          console.log("🧠 MATCH SCORE:", score);
+      if (item.organizationType === "society") {
+        filter.societyId = item.societyId;
+      }
 
-          if (score >= 0.75) {
-            if (!lostItem.matchCandidates) {
-              lostItem.matchCandidates = [];
+      const candidates = await Item.find(filter);
+
+      for (const candidate of candidates) {
+        if (!candidate.visionFeatures?.embedding?.length) continue;
+
+        const lost = item.type === "lost" ? item : candidate;
+        const found = item.type === "found" ? item : candidate;
+
+        const score = cosineSimilarity(
+          lost.visionFeatures.embedding,
+          found.visionFeatures.embedding
+        );
+
+        if (score < 0.75) continue;
+
+        // 🔒 deduplicated bidirectional update
+        await Item.updateOne(
+          { _id: lost._id },
+          {
+            $addToSet: {
+              matchCandidates: {
+                itemId: found._id,
+                score
+              }
             }
-
-            lostItem.matchCandidates.push({
-              itemId: foundItem._id,
-              score
-            });
-
-            await lostItem.save();
           }
-        }
+        );
+
+        await Item.updateOne(
+          { _id: found._id },
+          {
+            $addToSet: {
+              matchCandidates: {
+                itemId: lost._id,
+                score
+              }
+            }
+          }
+        );
       }
 
       res.json(item);
     } catch (err) {
-      console.error("❌ ADD ITEM ERROR:", err);
+      console.error("ADD ITEM ERROR:", err);
       res.status(500).json({ error: err.message });
     }
   }
 );
 
 /* ======================================================
-   GET ITEM BY ID (FOR MATCH VIEW FROM MY ITEMS)
+   GET ITEM BY ID
 ====================================================== */
 router.get("/by-id/:itemId", authMiddleware, async (req, res) => {
   try {
     const item = await Item.findById(req.params.itemId)
       .populate("postedBy", "name email");
 
-    if (!item) {
-      return res.status(404).json({ error: "Item not found" });
-    }
+    if (!item) return res.status(404).json({ error: "Item not found" });
 
     res.json(item);
   } catch (err) {
@@ -128,15 +131,12 @@ router.get("/by-id/:itemId", authMiddleware, async (req, res) => {
   }
 });
 
-
 /* ======================================================
-   GET ALL ITEMS (ORG SCOPED)
+   GET ALL ITEMS
 ====================================================== */
 router.get("/getallitems", authMiddleware, async (req, res) => {
   try {
-    const query = {
-      organizationType: req.user.organizationType
-    };
+    const query = { organizationType: req.user.organizationType };
 
     if (req.user.organizationType === "college") {
       query.collegeId = req.user.collegeId;
@@ -147,8 +147,9 @@ router.get("/getallitems", authMiddleware, async (req, res) => {
     }
 
     const items = await Item.find(query)
-      .sort({ createdAt: -1 })
-      .populate("postedBy", "name email");
+      .populate("postedBy", "name email")
+      .populate("claimedBy", "name email") // ✅ THIS LINE
+      .sort({ createdAt: -1 });
 
     res.json(items);
   } catch (err) {
@@ -156,29 +157,24 @@ router.get("/getallitems", authMiddleware, async (req, res) => {
   }
 });
 
+
 /* ======================================================
-   DELETE ITEM (CLEAN MATCH REFERENCES)
+   DELETE ITEM
 ====================================================== */
 router.delete("/delete/:itemId", authMiddleware, async (req, res) => {
   try {
     const item = await Item.findById(req.params.itemId);
 
-    if (!item) {
-      return res.status(404).json({ error: "Item not found" });
-    }
+    if (!item) return res.status(404).json({ error: "Item not found" });
 
-    // only owner can delete
-    if (item.postedBy.toString() !== req.user.userId) {
+    if (item.postedBy.toString() !== req.user.userId)
       return res.status(403).json({ error: "Not authorized" });
-    }
 
-    // 🔥 REMOVE THIS ITEM FROM ALL MATCH CANDIDATES
     await Item.updateMany(
       { "matchCandidates.itemId": item._id },
       { $pull: { matchCandidates: { itemId: item._id } } }
     );
 
-    // delete item itself
     await item.deleteOne();
 
     res.json({ message: "Item deleted successfully" });
@@ -186,7 +182,6 @@ router.delete("/delete/:itemId", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 /* ======================================================
    GENERATE QR
@@ -199,9 +194,8 @@ router.post("/generate-qr/:itemId", authMiddleware, async (req, res) => {
     if (item.status === "claimed")
       return res.status(400).json({ error: "Item already claimed" });
 
-    if (item.postedBy.toString() !== req.user.userId) {
+    if (item.postedBy.toString() !== req.user.userId)
       return res.status(403).json({ error: "Not authorized" });
-    }
 
     const qrToken = crypto.randomUUID();
 
@@ -216,22 +210,36 @@ router.post("/generate-qr/:itemId", authMiddleware, async (req, res) => {
 });
 
 /* ======================================================
-   VERIFY QR
+   VERIFY QR (GET + POST SAFE)
 ====================================================== */
-router.post("/verify-qr", async (req, res) => {
+router.get("/verify-qr", async (req, res) => {
   try {
-    const { qrToken } = req.body;
+    const token = req.query.token;
 
-    const item = await Item.findOne({ qrToken });
-    if (!item) return res.status(400).json({ error: "Invalid QR" });
-    if (item.qrExpiresAt < new Date())
-      return res.status(400).json({ error: "QR expired" });
+    if (!token) {
+      return res.status(400).json({ error: "QR token missing" });
+    }
 
-    res.json({ itemId: item._id });
+    const item = await Item.findOne({ qrToken: token });
+
+    if (!item) {
+      return res.status(404).json({ error: "QR not found or already used" });
+    }
+
+    if (item.qrExpiresAt && item.qrExpiresAt < new Date()) {
+      return res.status(410).json({ error: "QR expired" });
+    }
+
+    return res.json({
+      itemId: item._id,
+      status: item.status
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("VERIFY QR ERROR:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 /* ======================================================
    FINAL CLAIM
@@ -239,56 +247,53 @@ router.post("/verify-qr", async (req, res) => {
 router.post("/final-claim", authMiddleware, async (req, res) => {
   try {
     const { itemId } = req.body;
+
     const item = await Item.findById(itemId);
-
     if (!item) return res.status(404).json({ error: "Item not found" });
-    if (item.status === "claimed")
-      return res.status(400).json({ error: "Item already claimed" });
 
-    if (item.postedBy.toString() === req.user.userId) {
-      return res.status(403).json({ error: "Cannot claim your own item" });
+    if (item.status === "claimed") {
+      return res.status(400).json({ error: "Item already claimed" });
     }
 
+    // ✅ SAVE WHO CLAIMED IT
     item.status = "claimed";
     item.claimedBy = req.user.userId;
     item.qrToken = null;
     item.qrExpiresAt = null;
 
     await item.save();
+
+    // cleanup matching references
+    await Item.updateMany(
+      { "matchCandidates.itemId": item._id },
+      { $pull: { matchCandidates: { itemId: item._id } } }
+    );
+
     res.json({ message: "Item successfully claimed" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
+
+
 /* ======================================================
-   MY POSTED ITEMS
+   MY ITEMS
 ====================================================== */
 router.get("/my-posted", authMiddleware, async (req, res) => {
-  try {
-    const items = await Item.find({
-      postedBy: req.user.userId
-    }).sort({ createdAt: -1 });
-
-    res.json(items);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const items = await Item.find({ postedBy: req.user.userId }).sort({
+    createdAt: -1
+  });
+  res.json(items);
 });
 
-/* ======================================================
-   MY CLAIMED ITEMS
-====================================================== */
 router.get("/my-claimed", authMiddleware, async (req, res) => {
-  try {
-    const items = await Item.find({
-      claimedBy: req.user.userId
-    }).sort({ createdAt: -1 });
+  const items = await Item.find({ claimedBy: req.user.userId })
+    .populate("postedBy", "name email")
+    .sort({ createdAt: -1 });
 
-    res.json(items);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json(items);
 });
+
 
 module.exports = router;

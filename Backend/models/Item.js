@@ -56,6 +56,17 @@ const ItemSchema = new mongoose.Schema(
       default: null
     },
 
+   claimedByName: {
+  type: String,
+  default: ""
+ },
+
+   claimedByContact: {
+  type: String,
+  default: ""
+ },
+
+
     // ================= ORGANIZATION =================
     organizationType: {
       type: String,
