@@ -12,11 +12,8 @@ function History() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [qrData, setQrData] = useState({ itemId: null, token: null });
 
-  const [matchedCache, setMatchedCache] = useState({});
-
   const navigate = useNavigate();
 
-  /* ================= LOAD DATA ================= */
   useEffect(() => {
     const loadAll = async () => {
       try {
@@ -34,7 +31,6 @@ function History() {
     loadAll();
   }, []);
 
-  /* ================= DELETE ITEM ================= */
   const deleteItem = async (itemId) => {
     if (!window.confirm("Delete this item?")) return;
 
@@ -42,14 +38,12 @@ function History() {
       await apiFetch(`http://localhost:5000/api/items/delete/${itemId}`, {
         method: "DELETE",
       });
-
       setPostedItems((prev) => prev.filter((i) => i._id !== itemId));
     } catch (err) {
       alert(err.message);
     }
   };
 
-  /* ================= GENERATE QR ================= */
   const generateQR = async (itemId) => {
     try {
       const res = await apiFetch(
@@ -59,33 +53,6 @@ function History() {
       setQrData({ itemId, token: res.qrToken });
     } catch (err) {
       alert(err.message);
-    }
-  };
-
-  /* ================= LOAD MATCHED ITEM FULL DATA ================= */
-  const openMatchedItem = async (itemId) => {
-    try {
-      const item = await apiFetch(
-        `http://localhost:5000/api/items/by-id/${itemId}`
-      );
-      setSelectedItem(item);
-      setQrData({ itemId: null, token: null });
-    } catch {
-      alert("Matched item no longer exists");
-    }
-  };
-
-  /* ================= LOAD MATCH PREVIEW ================= */
-  const loadMatchedPreview = async (itemId) => {
-    if (matchedCache[itemId] !== undefined) return;
-
-    try {
-      const item = await apiFetch(
-        `http://localhost:5000/api/items/by-id/${itemId}`
-      );
-      setMatchedCache((prev) => ({ ...prev, [itemId]: item }));
-    } catch {
-      setMatchedCache((prev) => ({ ...prev, [itemId]: null }));
     }
   };
 
@@ -119,11 +86,7 @@ function History() {
                 <img
                   src={item.imageUrl || defaultImage}
                   className="card-img-top"
-                  style={{
-                    height: "200px",
-                    objectFit: "contain",
-                    backgroundColor: "#f8f9fa"
-                  }}
+                  style={{ height: "200px", objectFit: "contain" }}
                   alt=""
                 />
 
@@ -185,11 +148,7 @@ function History() {
                 <img
                   src={item.imageUrl || defaultImage}
                   className="card-img-top"
-                  style={{
-                    height: "200px",
-                    objectFit: "contain",
-                    backgroundColor: "#f8f9fa"
-                  }}
+                  style={{ height: "200px", objectFit: "contain" }}
                   alt=""
                 />
 
@@ -219,13 +178,9 @@ function History() {
       {selectedItem && (
         <div
           className="modal fade show"
-          style={{
-            display: "block",
-            backgroundColor: "rgba(0,0,0,0.5)",
-            overflowY: "auto"
-          }}
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-          <div className="modal-dialog modal-lg modal-dialog-scrollable" style={{ maxHeight: "90vh" }}>
+          <div className="modal-dialog modal-lg modal-dialog-scrollable">
             <div className="modal-content">
               <div className="modal-header">
                 <h5>{selectedItem.title}</h5>
@@ -236,11 +191,11 @@ function History() {
                     setQrData({ itemId: null, token: null });
                   }}
                 >
-                  <span>&times;</span>
+                  ×
                 </button>
               </div>
 
-              <div className="modal-body" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+              <div className="modal-body">
                 <img
                   src={selectedItem.imageUrl || defaultImage}
                   className="img-fluid mb-3"
@@ -250,51 +205,44 @@ function History() {
                 <p>{selectedItem.description}</p>
                 <p className="text-muted">{selectedItem.location}</p>
 
-                {/* 🔍 MATCHED ITEMS */}
-                {selectedItem.type === "lost" &&
-                  selectedItem.matchCandidates?.length > 0 && (
-                    <div className="alert alert-warning mt-3">
-                      <h6>🔍 Possible Matches</h6>
+                {/* ✅ MATCHES FIXED */}
+                {selectedItem.matchCandidates?.length > 0 && (
+                  <div className="alert alert-warning mt-3">
+                    <h6>🔍 Possible Matches</h6>
 
-                      {selectedItem.matchCandidates.map((m, i) => {
-                        const preview = matchedCache[m.itemId];
+                    {selectedItem.matchCandidates.map((m, i) => {
+                      const match = m.itemId;
+                      if (!match) return null;
 
-                        if (preview === null) return null;
-
-                        if (!preview) {
-                          loadMatchedPreview(m.itemId);
-                          return null;
-                        }
-
-                        return (
-                          <div
-                            key={i}
-                            className="d-flex align-items-center border rounded p-2 mb-2"
-                            style={{ cursor: "pointer" }}
-                            onClick={() => openMatchedItem(preview._id)}
-                          >
-                            <img
-                              src={preview.imageUrl || defaultImage}
-                              style={{
-                                width: "55px",
-                                height: "55px",
-                                objectFit: "cover",
-                                borderRadius: "6px",
-                                marginRight: "10px"
-                              }}
-                              alt=""
-                            />
-                            <div>
-                              <strong>{preview.title}</strong>
-                              <div style={{ fontSize: "0.85rem" }}>
-                                Confidence: {Math.round(m.score * 100)}%
-                              </div>
+                      return (
+                        <div
+                          key={i}
+                          className="d-flex align-items-center border rounded p-2 mb-2"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => setSelectedItem(match)}
+                        >
+                          <img
+                            src={match.imageUrl || defaultImage}
+                            style={{
+                              width: "55px",
+                              height: "55px",
+                              objectFit: "cover",
+                              borderRadius: "6px",
+                              marginRight: "10px"
+                            }}
+                            alt=""
+                          />
+                          <div>
+                            <strong>{match.title}</strong>
+                            <div style={{ fontSize: "0.85rem" }}>
+                              Confidence: {Math.round(m.score * 100)}%
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {qrData.token && qrData.itemId === selectedItem._id && (
                   <div className="text-center mt-3">

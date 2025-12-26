@@ -118,17 +118,20 @@ const ItemSchema = new mongoose.Schema(
     },
 
     // ================= MATCH RESULTS (NEW) =================
-    matchCandidates: [
-      {
-        itemId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Item"
-        },
-        score: {
-          type: Number
-        }
-      }
-    ]
+matchCandidates: [
+  {
+    itemId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Item",
+      required: true
+    },
+    score: {
+      type: Number,
+      required: true
+    }
+  }
+],
+
   },
   { timestamps: true }
 );

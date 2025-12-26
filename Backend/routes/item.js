@@ -67,47 +67,74 @@ router.post(
       }
 
       const candidates = await Item.find(filter);
+for (const candidate of candidates) {
 
-      for (const candidate of candidates) {
-        if (!candidate.visionFeatures?.embedding?.length) continue;
+  // ✅ ensure candidate has embedding
+  if (!candidate.visionFeatures?.embedding?.length && candidate.imageUrl) {
+    const emb = await getImageEmbedding(candidate.imageUrl);
 
-        const lost = item.type === "lost" ? item : candidate;
-        const found = item.type === "found" ? item : candidate;
+    await Item.updateOne(
+      { _id: candidate._id },
+      { $set: { "visionFeatures.embedding": emb } }
+    );
 
-        const score = cosineSimilarity(
-          lost.visionFeatures.embedding,
-          found.visionFeatures.embedding
-        );
+    candidate.visionFeatures.embedding = emb;
+  }
 
-        if (!Number.isFinite(score)) continue;
+  // ✅ ensure current item has embedding
+  if (!item.visionFeatures?.embedding?.length && item.imageUrl) {
+    const emb = await getImageEmbedding(item.imageUrl);
 
-        if (score < 0.75) continue;
+    await Item.updateOne(
+      { _id: item._id },
+      { $set: { "visionFeatures.embedding": emb } }
+    );
 
-        // 🔒 deduplicated bidirectional update
-        await Item.updateOne(
-          { _id: lost._id },
-          {
-            $addToSet: {
-              matchCandidates: {
-                itemId: found._id,
-                score
-              }
-            }
-          }
-        );
+    item.visionFeatures.embedding = emb;
+  }
 
-        await Item.updateOne(
-          { _id: found._id },
-          {
-            $addToSet: {
-              matchCandidates: {
-                itemId: lost._id,
-                score
-              }
-            }
-          }
-        );
+  // still missing embeddings → skip
+  if (
+    !item.visionFeatures?.embedding?.length ||
+    !candidate.visionFeatures?.embedding?.length
+  ) {
+    continue;
+  }
+
+  const lost = item.type === "lost" ? item : candidate;
+  const found = item.type === "found" ? item : candidate;
+
+  const score = cosineSimilarity(
+    lost.visionFeatures.embedding,
+    found.visionFeatures.embedding
+  );
+
+  if (!Number.isFinite(score) || score < 0.75) continue;
+
+  await Item.updateOne(
+    { _id: lost._id },
+    {
+      $addToSet: {
+        matchCandidates: {
+          itemId: found._id,
+          score
+        }
       }
+    }
+  );
+
+  await Item.updateOne(
+    { _id: found._id },
+    {
+      $addToSet: {
+        itemId: lost._id,
+        score
+      }
+    }
+  );
+}
+
+
 
       return res.status(200).json({
    success: true,
@@ -127,6 +154,7 @@ router.post(
 router.get("/by-id/:itemId", authMiddleware, async (req, res) => {
   try {
     const item = await Item.findById(req.params.itemId)
+      .populate("matchCandidates.itemId")
       .populate("postedBy", "name email");
 
     if (!item) return res.status(404).json({ error: "Item not found" });
@@ -154,7 +182,8 @@ router.get("/getallitems", authMiddleware, async (req, res) => {
 
     const items = await Item.find(query)
       .populate("postedBy", "name email")
-      .populate("claimedBy", "name email") // ✅ THIS LINE
+      .populate("claimedBy", "name email")
+      .populate("matchCandidates.itemId") // ✅ REQUIRED
       .sort({ createdAt: -1 });
 
     res.json(items);
@@ -162,6 +191,7 @@ router.get("/getallitems", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 /* ======================================================
@@ -287,9 +317,10 @@ router.post("/final-claim", authMiddleware, async (req, res) => {
    MY ITEMS
 ====================================================== */
 router.get("/my-posted", authMiddleware, async (req, res) => {
-  const items = await Item.find({ postedBy: req.user.userId }).sort({
-    createdAt: -1
-  });
+ const items = await Item.find({ postedBy: req.user.userId })
+  .populate("matchCandidates.itemId")
+  .sort({ createdAt: -1 });
+
   res.json(items);
 });
 

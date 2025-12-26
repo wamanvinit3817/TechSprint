@@ -241,6 +241,47 @@ function Dashboard() {
                 <p>{selectedItem.description}</p>
                 <p><b>Location:</b> {selectedItem.location}</p>
 
+                {/* 🔍 POSSIBLE MATCHES */}
+{selectedItem.matchCandidates?.length > 0 && (
+  <div className="alert alert-warning mt-3">
+    <h6>🔍 Possible Matches</h6>
+
+    {selectedItem.matchCandidates.map((m, i) => {
+      const match = m.itemId;
+      if (!match) return null;
+
+      return (
+        <div
+          key={i}
+          className="d-flex align-items-center border rounded p-2 mb-2"
+          style={{ cursor: "pointer" }}
+          onClick={() => setSelectedItem(match)}
+        >
+          <img
+            src={match.imageUrl || defaultImage}
+            alt=""
+            style={{
+              width: "55px",
+              height: "55px",
+              objectFit: "cover",
+              borderRadius: "6px",
+              marginRight: "10px"
+            }}
+          />
+
+          <div>
+            <strong>{match.title}</strong>
+            <div style={{ fontSize: "0.85rem" }}>
+              Confidence: {Math.round(m.score * 100)}%
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+
                 {selectedItem.status === "claimed" && selectedItem.claimedBy && (
                   <div className="alert alert-success">
                     ✅ Claimed by <strong>{selectedItem.claimedBy.name}</strong>
