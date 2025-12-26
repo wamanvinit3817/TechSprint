@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 
 import Login from "./pages/Login";
 import AuthSuccess from "./pages/AuthSuccess";
@@ -14,9 +15,17 @@ import { AlertProvider } from "./context/AlertContext";
 import { LoadingProvider } from "./context/LoadingContext";
 import GlobalAlert from "./pages/GlobalAlert";
 
+
+import { initTheme } from "./utils/theme";
+import "./App.css";
+
 import "./App.css";
 
 function App() {
+  useEffect(() => {
+    initTheme(); // 🔥 initialize dark/light theme ONCE
+  }, []);
+
   return (
     <LoadingProvider>
       <AlertProvider>

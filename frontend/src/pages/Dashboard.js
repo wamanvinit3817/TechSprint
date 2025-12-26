@@ -1,3 +1,5 @@
+import "../App.css";
+
 import { useEffect, useState } from "react";
 import { apiFetch } from "../utils/api";
 import { useNavigate } from "react-router-dom";
@@ -98,8 +100,15 @@ function Dashboard() {
       <GlobalAlert />
 
       {/* ================= NAVBAR ================= */}
+
+      <nav className="navbar navbar-expand-lg px-3 dashboard-navbar">
+
+
       <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 sticky-top">
-        <a className="navbar-brand">Findora</a>
+
+        <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
+          Findora
+        </a>
 
         <ul className="navbar-nav mr-auto">
           {["all", "lost", "found", "claimed"].map((f) => (
@@ -150,7 +159,8 @@ function Dashboard() {
           <div className="row">
             {filteredItems.map((item) => (
               <div className="col-md-4 mb-4" key={item._id}>
-                <div className="card">
+                <div className="card dashboard-card">
+
                   <img
                     src={item.imageUrl || defaultImage}
                     className="card-img-top"
@@ -211,8 +221,12 @@ function Dashboard() {
 
       {/* ================= MODAL ================= */}
       {selectedItem && (
-        <div className="modal fade show" style={{ display: "block", background: "rgba(0,0,0,0.6)" }}>
-          <div className="modal-dialog modal-lg modal-dialog-scrollable">
+        <div
+          className="modal fade show"
+          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+
             <div className="modal-content">
               <div className="modal-header">
                 <h5>{selectedItem.title}</h5>
@@ -221,12 +235,27 @@ function Dashboard() {
                 </button>
               </div>
 
+
               <div className="modal-body">
+                <div className="modal-image-wrapper">
+  <img
+    src={selectedItem.imageUrl || defaultImage}
+    alt="item"
+    className="modal-image"
+  />
+</div>
+
+
+            <div
+              className="modal-body"
+              style={{ maxHeight: "70vh", overflowY: "auto" }}
+            >
                 <img
                   src={selectedItem.imageUrl || defaultImage}
                   className="img-fluid mb-3"
                   alt=""
                 />
+
 
                 <p>{selectedItem.description}</p>
 
