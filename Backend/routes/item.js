@@ -79,6 +79,8 @@ router.post(
           found.visionFeatures.embedding
         );
 
+        if (!Number.isFinite(score)) continue;
+
         if (score < 0.75) continue;
 
         // 🔒 deduplicated bidirectional update
@@ -107,7 +109,11 @@ router.post(
         );
       }
 
-      res.json(item);
+      return res.status(200).json({
+   success: true,
+   item
+   });
+
     } catch (err) {
       console.error("ADD ITEM ERROR:", err);
       res.status(500).json({ error: err.message });

@@ -1,5 +1,4 @@
 import "../App.css";
-
 import { useEffect, useState } from "react";
 import { apiFetch } from "../utils/api";
 import { useNavigate } from "react-router-dom";
@@ -7,11 +6,12 @@ import defaultImage from "../assets/default-item.png";
 import { QRCodeCanvas } from "qrcode.react";
 import GlobalAlert from "./GlobalAlert";
 import { useAlert } from "../context/AlertContext";
-import { timeAgo } from "../utils/time";
 import GlobalLoader from "./GlobalLoader";
 
 function Dashboard() {
   const { showAlert } = useAlert();
+  const navigate = useNavigate();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("all");
@@ -21,36 +21,16 @@ function Dashboard() {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrData, setQrData] = useState({ itemId: null, token: null });
 
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/");
-  };
-
-  const generateQR = async (itemId) => {
-    try {
-      setQrLoading(true);
-      const res = await apiFetch(
-        `http://localhost:5000/api/items/generate-qr/${itemId}`,
-        { method: "POST" }
-      );
-      setQrData({ itemId, token: res.qrToken });
-    } catch (err) {
-      showAlert("danger", "Only founder can generate QR");
-    } finally {
-      setQrLoading(false);
-    }
-  };
-
+  /* ================= LOAD USER ================= */
   useEffect(() => {
     apiFetch("http://localhost:5000/auth/me")
-      .then((data) => setMe(data))
+      .then(setMe)
       .catch(() => {});
   }, []);
 
+  /* ================= LOAD ITEMS ================= */
   useEffect(() => {
-    const loadItems = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         const data = await apiFetch("http://localhost:5000/api/items/getallitems");
@@ -61,16 +41,14 @@ function Dashboard() {
         setLoading(false);
       }
     };
-    loadItems();
+    load();
   }, []);
 
   useEffect(() => {
     document.body.style.overflow = selectedItem ? "hidden" : "auto";
   }, [selectedItem]);
 
-  /* ======================================================
-     ✅ FIXED FILTER LOGIC
-  ====================================================== */
+  /* ================= FILTER LOGIC ================= */
   const filteredItems = items.filter((item) => {
     const text = search.toLowerCase();
 
@@ -79,20 +57,33 @@ function Dashboard() {
       item.description.toLowerCase().includes(text) ||
       item.location.toLowerCase().includes(text);
 
-    if (filter === "claimed") {
-      return item.status === "claimed" && matchesSearch;
-    }
-
-    if (filter === "lost") {
-      return item.status === "open" && item.type === "lost" && matchesSearch;
-    }
-
-    if (filter === "found") {
-      return item.status === "open" && item.type === "found" && matchesSearch;
-    }
+    if (filter === "claimed") return item.status === "claimed" && matchesSearch;
+    if (filter === "lost") return item.status === "open" && item.type === "lost" && matchesSearch;
+    if (filter === "found") return item.status === "open" && item.type === "found" && matchesSearch;
 
     return matchesSearch;
   });
+
+  /* ================= QR ================= */
+  const generateQR = async (itemId) => {
+    try {
+      setQrLoading(true);
+      const res = await apiFetch(
+        `http://localhost:5000/api/items/generate-qr/${itemId}`,
+        { method: "POST" }
+      );
+      setQrData({ itemId, token: res.qrToken });
+    } catch {
+      showAlert("danger", "Only founder can generate QR");
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/");
+  };
 
   return (
     <>
@@ -100,17 +91,10 @@ function Dashboard() {
       <GlobalAlert />
 
       {/* ================= NAVBAR ================= */}
-
-      <nav className="navbar navbar-expand-lg px-3 dashboard-navbar">
-
-
       <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 sticky-top">
+        <span className="navbar-brand">Findora</span>
 
-        <a className="navbar-brand" href="#" style={{ fontSize: "1rem" }}>
-          Findora
-        </a>
-
-        <ul className="navbar-nav mr-auto">
+        <ul className="navbar-nav me-auto">
           {["all", "lost", "found", "claimed"].map((f) => (
             <li className="nav-item" key={f}>
               <button
@@ -128,7 +112,7 @@ function Dashboard() {
           placeholder="Search items..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "200px" }}
+          style={{ width: 220 }}
         />
 
         <button className="btn btn-outline-primary me-2" onClick={() => navigate("/add-item")}>
@@ -151,7 +135,7 @@ function Dashboard() {
         )}
       </nav>
 
-      {/* ================= ITEMS GRID ================= */}
+      {/* ================= GRID ================= */}
       <div className="container mt-4">
         {filteredItems.length === 0 ? (
           <div className="alert alert-info">No matching items found</div>
@@ -160,7 +144,6 @@ function Dashboard() {
             {filteredItems.map((item) => (
               <div className="col-md-4 mb-4" key={item._id}>
                 <div className="card dashboard-card">
-
                   <img
                     src={item.imageUrl || defaultImage}
                     className="card-img-top"
@@ -194,7 +177,7 @@ function Dashboard() {
                     {item.status === "claimed" && item.claimedBy && (
                       <p className="text-success">
                         <i className="fa-solid fa-user-check"></i>{" "}
-                        Claimed by: <b>{item.claimedBy.name}</b>
+                        Claimed by <b>{item.claimedBy.name}</b>
                       </p>
                     )}
 
@@ -221,47 +204,23 @@ function Dashboard() {
 
       {/* ================= MODAL ================= */}
       {selectedItem && (
-        <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
+        <div className="modal fade show" style={{ display: "block", background: "rgba(0,0,0,.6)" }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
-
             <div className="modal-content">
               <div className="modal-header">
                 <h5>{selectedItem.title}</h5>
-                <button className="close" onClick={() => setSelectedItem(null)}>
-                  ×
-                </button>
+                <button className="close" onClick={() => setSelectedItem(null)}>×</button>
               </div>
 
-
               <div className="modal-body">
-                <div className="modal-image-wrapper">
-  <img
-    src={selectedItem.imageUrl || defaultImage}
-    alt="item"
-    className="modal-image"
-  />
-</div>
-
-
-            <div
-              className="modal-body"
-              style={{ maxHeight: "70vh", overflowY: "auto" }}
-            >
                 <img
                   src={selectedItem.imageUrl || defaultImage}
                   className="img-fluid mb-3"
                   alt=""
                 />
 
-
                 <p>{selectedItem.description}</p>
-
-                <p>
-                  <b>Location:</b> {selectedItem.location}
-                </p>
+                <p><b>Location:</b> {selectedItem.location}</p>
 
                 {selectedItem.status === "claimed" && selectedItem.claimedBy && (
                   <div className="alert alert-success">

@@ -1,35 +1,21 @@
-
-
 export async function apiFetch(url, options = {}) {
-   
   const token = localStorage.getItem("token");
 
   const res = await fetch(url, {
     ...options,
     headers: {
-      ...(options.headers || {}),
-      Authorization: token ? `Bearer ${token}` : ""
+      ...(options.body instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" }),
+      Authorization: token ? `Bearer ${token}` : "",
+      ...(options.headers || {})
     }
   });
 
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error("Something went wrong");
-  }
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    // ❌ NEVER expose raw backend messages
-    if (data?.error === "Not authorized") {
-      throw new Error("unauthorized");
-    }
-
-    if (data?.error === "duplicate_item") {
-      throw new Error("duplicate_item");
-    }
-
-    throw new Error("server_error");
+    throw new Error("Request Proceeded");
   }
 
   return data;
