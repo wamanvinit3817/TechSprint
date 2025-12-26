@@ -91,49 +91,68 @@ function Dashboard() {
       <GlobalAlert />
 
       {/* ================= NAVBAR ================= */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-light px-3 sticky-top">
-        <span className="navbar-brand">Findora</span>
+      <nav className="navbar d-flex align-items-center justify-content-between">
 
-        <ul className="navbar-nav me-auto">
-          {["all", "lost", "found", "claimed"].map((f) => (
-            <li className="nav-item" key={f}>
-              <button
-                className={`nav-link btn btn-link ${filter === f ? "fw-bold" : ""}`}
-                onClick={() => setFilter(f)}
-              >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            </li>
-          ))}
-        </ul>
+  {/* LEFT SECTION */}
+  <div className="d-flex align-items-center gap-2">
+    <span className="navbar-brand">Findora</span>
 
-        <input
-          className="form-control mx-2"
-          placeholder="Search items..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 220 }}
-        />
+    <button className="nav-link btn" onClick={() => setFilter("all")}>All</button>
+    <button className="nav-link btn" onClick={() => setFilter("lost")}>Lost</button>
+    <button className="nav-link btn" onClick={() => setFilter("found")}>Found</button>
+    <button className="nav-link btn" onClick={() => setFilter("claimed")}>Claimed</button>
+  </div>
 
-        <button className="btn btn-outline-primary me-2" onClick={() => navigate("/add-item")}>
-          + Add Item
-        </button>
+  {/* CENTER SEARCH */}
+  <div className="mx-auto">
+    <input
+      type="search"
+      className="form-control"
+      placeholder="Search items..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+  </div>
 
-        <button className="btn btn-outline-secondary me-2" onClick={() => navigate("/history")}>
-          My Items
-        </button>
+  {/* RIGHT SIDE */}
+  <div className="d-flex align-items-center gap-2">
 
-        <button className="btn btn-outline-danger" onClick={handleLogout}>
-          Logout
-        </button>
+    <button
+      className="btn btn-outline-primary"
+      onClick={() => navigate("/add-item")}
+    >
+      + Add Item
+    </button>
 
-        {me && (
-          <div className="ms-3 text-center">
-            <div><b>{me.user?.name}</b></div>
-            <small>{me.organization?.name}</small>
-          </div>
-        )}
-      </nav>
+    <button
+      className="btn btn-outline-secondary"
+      onClick={() => navigate("/history")}
+    >
+      My Items
+    </button>
+
+    <button
+      className="btn btn-outline-danger"
+      onClick={handleLogout}
+    >
+      Logout
+    </button>
+
+    {/* ✅ USER INFO (FINAL FIX) */}
+    {me && (
+      <div className="user-meta">
+        <div className="user-name">
+          👤 {me.user?.name}
+        </div>
+        <div className="user-divider"></div>
+        <div className="user-org">
+          🎓 {me.organization?.name}
+        </div>
+      </div>
+    )}
+  </div>
+</nav>
+
 
       {/* ================= GRID ================= */}
       <div className="container mt-4">
