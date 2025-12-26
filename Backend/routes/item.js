@@ -38,7 +38,28 @@ router.post(
         visionFeatures: { embedding: [] },
         matchCandidates: []
       };
+      const escapeRegex = (text) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const duplicate = await Item.findOne({
+  postedBy: req.user.userId,
+  title: {
+    $regex: `^${escapeRegex(req.body.title.trim())}$`,
+    $options: "i"
+  },
+  location: {
+    $regex: `^${escapeRegex(req.body.location.trim())}$`,
+    $options: "i"
+  },
+  status: "open" // make sure this matches your schema
+});
+
+if (duplicate) {
+  return res.status(409).json({
+    error: "duplicate_item",
+    message: "You already posted this item"
+  });
+}
       const item = await Item.create(itemData);
 
       if (!item.imageUrl) return res.json(item);

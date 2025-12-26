@@ -40,26 +40,32 @@ const handleSubmit = async (e) => {
       formData.append("founderContact", form.founderContact);
     }
 
-    const res = await apiFetch("http://localhost:5000/api/items/additem", {
+    // ✅ if apiFetch resolves, request was successful
+    await apiFetch("http://localhost:5000/api/items/additem", {
       method: "POST",
       body: formData
     });
-
-    // ✅ IMPORTANT: ensure success
-    if (!res || !res.success) {
-      throw new Error("Failed to add item");
-    }
 
     showAlert("success", "Item posted successfully!");
     navigate("/dashboard");
 
   } catch (err) {
     console.error(err);
-    showAlert("danger", err.message || "Failed to add item");
+
+    if (err.message === "duplicate_item") {
+      showAlert(
+        "warning",
+        "You already posted this item at the same location."
+      );
+    } else {
+      showAlert("danger", err.message || "Failed to add item");
+    }
+
   } finally {
     setSubmitting(false);
   }
 };
+
 
 
 
@@ -123,14 +129,16 @@ const handleSubmit = async (e) => {
             </>
           )}
 
-          <label>Item Photo (optional)</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) =>
-              setForm({ ...form, image: e.target.files[0] })
-            }
-          />
+    <label className="choose-file-label">Item Photo (optional)</label>
+<input
+  type="file"
+  className="choose-file"
+  accept="image/*"
+  onChange={(e) =>
+    setForm({ ...form, image: e.target.files[0] })
+  }
+/>
+
 
           <button className="primary-btn" type="submit" disabled={submitting}>
             {submitting ? "Posting..." : "Post Item"}

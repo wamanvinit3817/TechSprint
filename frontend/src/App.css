@@ -1281,7 +1281,7 @@ body.light .my-items-btn:hover {
   box-shadow: 
     0 10px 30px rgba(79, 112, 255, 0.35);
 }
-=======
+
 body{
    font-family: "Poppins", sans-serif;
 }
@@ -3632,5 +3632,99 @@ form[novalidate] select:invalid {
   font-size: 0.65rem;
   opacity: 0.9;
 }
+.back-btn-history {
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 
+  background: linear-gradient(
+    135deg,
+    rgba(180, 160, 255, 0.35),
+    rgba(120, 100, 220, 0.35)
+  );
+
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.85rem;
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  transition: all 0.25s ease;
+}
+
+/* Hover */
+.back-btn-history:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(
+    135deg,
+    rgba(200, 180, 255, 0.45),
+    rgba(140, 120, 240, 0.45)
+  );
+
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* Active / Click */
+.back-btn-history:active {
+  transform: translateY(0);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.25),
+    inset 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.choose-file-label {
+  font-size: 0.85rem;
+  color: #eae6ff;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.choose-file {
+  width: 100%;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #1e1e2f;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Chrome / Edge button */
+.choose-file::-webkit-file-upload-button {
+  background: linear-gradient(135deg, #7f4bff, #5aa9ff);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 12px;
+  margin-right: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.choose-file::-webkit-file-upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(127, 75, 255, 0.45);
+}
+
+/* Hover on whole input */
+.choose-file:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Focus state */
+.choose-file:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(127, 75, 255, 0.5);
+}
 

@@ -7,7 +7,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import GlobalAlert from "./GlobalAlert";
 import { useAlert } from "../context/AlertContext";
 import GlobalLoader from "./GlobalLoader";
-
+import { timeAgo } from "../utils/time";
 function Dashboard() {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
@@ -172,7 +172,7 @@ function Dashboard() {
 
                   <div className="card-body">
                     <div className="d-flex justify-content-between">
-                      <h5>{item.title}</h5>
+                      <h5><i class="fa-solid fa-box-open"></i> {item.title}</h5>
                       <span
                         className={`badge ${
                           item.status === "claimed"
@@ -200,9 +200,13 @@ function Dashboard() {
                       </p>
                     )}
 
+                    <p className="text-muted mb-1">
+  <i class="fa-regular fa-clock"></i> {timeAgo(item.createdAt)}
+</p>
+
                     <p>{item.description}</p>
 
-                    <p className="text-muted">
+                    <p className="text-muted my-2">
                       <i className="fa-solid fa-location-dot"></i>{" "}
                       {item.location}
                     </p>
